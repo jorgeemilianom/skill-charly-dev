@@ -49,7 +49,18 @@ cd skill-charly-dev
 ./install.sh
 ```
 
-The script copies each `SKILL.md` into `~/.claude/skills/<name>/`, skips files that are already up to date, and checks that required dependencies are present.
+By default the installer creates **symlinks** — `~/.claude/skills/<name>/SKILL.md` points directly into this repo.
+That means a `git pull` updates the skills instantly, with no re-install needed.
+
+```bash
+git pull          # skills are updated automatically
+```
+
+If you prefer a standalone copy with no dependency on the repo location:
+
+```bash
+./install.sh --copy
+```
 
 ### Requirements
 
