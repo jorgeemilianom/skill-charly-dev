@@ -14,9 +14,9 @@ Autonomous AI software engineer workflow that transforms Jira tickets into produ
 ## Workflow
 
 ```
-/dev MSOF-XXX
+/dev PROJ-XXX
     │
-    ├── /assess MSOF-XXX      ← technical deep dive + Jira enrichment
+    ├── /assess PROJ-XXX      ← technical deep dive + Jira enrichment
     │
     ├── Phase 2: Branch setup
     ├── Phase 3: Development
@@ -24,19 +24,19 @@ Autonomous AI software engineer workflow that transforms Jira tickets into produ
     ├── Phase 5: Commit
     ├── Phase 6: Push
     │
-    ├── /pr MSOF-XXX          ← create PR + ultrareview
-    └── /reflect MSOF-XXX     ← closing reflection + memory
+    ├── /pr PROJ-XXX          ← create PR + ultrareview
+    └── /reflect PROJ-XXX     ← closing reflection + memory
 ```
 
 ## Subcommands
 
 | Command | Action |
 |---------|--------|
-| `/dev MSOF-XXX` | Full workflow from scratch |
-| `/dev MSOF-XXX resume` | Reconstruct development context + standup summary |
-| `/dev MSOF-XXX status` | Quick read-only ticket state (6 lines) |
-| `/dev MSOF-XXX migration` | DB migration workflow (QuintaApp-Api) |
-| `/dev MSOF-XXX reflect` | Post-ticket reflection → delegates to `/reflect` |
+| `/dev PROJ-XXX` | Full workflow from scratch |
+| `/dev PROJ-XXX resume` | Reconstruct development context + standup summary |
+| `/dev PROJ-XXX status` | Quick read-only ticket state (6 lines) |
+| `/dev PROJ-XXX migration` | DB migration workflow |
+| `/dev PROJ-XXX reflect` | Post-ticket reflection → delegates to `/reflect` |
 | `/dev <PR URL>` | Resume own PR / handle review comments |
 | `/dev review <PR URL>` | Code review for a teammate's PR |
 | `/dev status` | Multi-ticket overview across all repos |
@@ -46,28 +46,45 @@ Autonomous AI software engineer workflow that transforms Jira tickets into produ
 ```bash
 git clone https://github.com/jorgeemilianom/skill-charly-dev.git
 cd skill-charly-dev
+cp config.example.sh config.sh   # fill in your project values
 ./install.sh
 ```
 
-By default the installer creates **symlinks** — `~/.claude/skills/<name>/SKILL.md` points directly into this repo.
-That means a `git pull` updates the skills instantly, with no re-install needed.
+The installer reads `config.sh`, substitutes your project's values into the skill templates, and writes the final files to `~/.claude/skills/`.
+
+To update after a `git pull`:
 
 ```bash
-git pull          # skills are updated automatically
+git pull && ./install.sh
 ```
 
-If you prefer a standalone copy with no dependency on the repo location:
+## Configuration
+
+All project-specific values live in `config.sh` (gitignored). Copy the example and edit:
 
 ```bash
-./install.sh --copy
+cp config.example.sh config.sh
 ```
 
-### Requirements
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `JIRA_SCRIPTS` | Path to jira-communication scripts | `/path/to/jira-communication/scripts` |
+| `PROJECT_KEY` | Jira project key (uppercase) | `PROJ` |
+| `PROJECT_KEY_LOWER` | Same in lowercase (used in branch names) | `proj` |
+| `JIRA_BASE_URL` | Your Jira base URL | `https://your-org.atlassian.net` |
+| `REPOS` | Space-separated repo directory names | `backend-api frontend-app` |
+| `SPECIAL_REPO` | Repo that uses a non-standard base branch | `frontend-app` |
+| `SPECIAL_REPO_BASE` | Its base branch | `develop` |
 
-| Tool | Required | Purpose |
-|------|----------|---------|
-| [Claude Code](https://claude.ai/code) | ✅ | runs the skills |
-| [`gh`](https://cli.github.com/) | ✅ | create PRs, checkout branches, post reviews |
-| [`uv`](https://github.com/astral-sh/uv) | ✅ | runs the Jira Python scripts |
-| `JIRA_TOKEN` env var | ✅ | authenticate against `msoftia.atlassian.net` |
-| `.ai-memory/` at workspace root | auto-created | snapshots, assessments, user profile |
+> The skill files also contain project-specific **architecture rules** and **keyword-to-repo mappings** (marked with `> CUSTOMIZE` comments). Edit those sections in `dev/SKILL.md` and `assess/SKILL.md` to match your stack, then re-run `./install.sh`.
+
+## Requirements
+
+| Tool | Purpose |
+|------|---------|
+| [Claude Code](https://claude.ai/code) | runs the skills |
+| [`gh`](https://cli.github.com/) | create PRs, checkout branches, post reviews |
+| [`uv`](https://github.com/astral-sh/uv) | runs the Jira Python scripts |
+| [`envsubst`](https://www.gnu.org/software/gettext/) | config substitution at install time (`apt install gettext` / `brew install gettext`) |
+| `JIRA_TOKEN` env var | authenticate against your Jira instance |
+| `.ai-memory/` at workspace root | auto-created — stores snapshots, assessments, user profile |
