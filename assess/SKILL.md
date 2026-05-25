@@ -1,6 +1,6 @@
 ---
 name: assess
-description: "Technical deep dive before writing any code. Run for a MSOF-XXX ticket: reads Jira, detects affected repos (QuintaApp-Api / QuintaApp-Frontend / CloudHubCorp), explores the codebase with architecture-aware heuristics, loads .ai-memory context, produces a Technical Assessment, and — after one user confirmation — enriches the Jira ticket with structured documentation and transitions it to In Progress. Auto-triggers when user says 'assess MSOF-XXX', 'analizar MSOF-XXX', or before starting development on a ticket."
+description: "Technical deep dive before writing any code. Reads Jira, detects affected repos, explores the codebase with architecture-aware heuristics, loads .ai-memory context, produces a Technical Assessment, and — after one user confirmation — enriches the Jira ticket with structured documentation and transitions it to In Progress."
 allowed-tools: Bash Read Write
 ---
 
@@ -21,7 +21,7 @@ This skill performs the full pre-development analysis before any code is written
 Run all of the following **simultaneously** before doing anything else.
 
 ```bash
-JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+JIRA_SKILL=${JIRA_SCRIPTS}
 WS=$(python3 -c "
 import os, subprocess
 try:
@@ -36,9 +36,9 @@ print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
 
 # 2 — Check branch state across all sub-repos
-git -C $WS/QuintaApp-Api    fetch origin 2>/dev/null; git -C $WS/QuintaApp-Api    branch -a | grep -i "<TICKET_ID>"
-git -C $WS/QuintaApp-Frontend fetch origin 2>/dev/null; git -C $WS/QuintaApp-Frontend branch -a | grep -i "<TICKET_ID>"
-git -C $WS/CloudHubCorp    fetch origin 2>/dev/null; git -C $WS/CloudHubCorp    branch -a | grep -i "<TICKET_ID>"
+for REPO in ${REPOS}; do
+  git -C $WS/$REPO fetch origin 2>/dev/null; git -C $WS/$REPO branch -a | grep -i "<TICKET_ID>"
+done
 
 # 3 — Initialize and read .ai-memory/
 mkdir -p $WS/.ai-memory/tickets $WS/.ai-memory/assessments
@@ -85,9 +85,9 @@ Feed findings into the **Memory context** section of the Technical Assessment. C
 Use the epic key extracted in Step 0. If no epic, skip silently.
 
 ```bash
-JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/core/jira-search.py query \
-  "project = MSOF AND parent = <EPIC_KEY> ORDER BY status, priority" \
+  "project = ${PROJECT_KEY} AND parent = <EPIC_KEY> ORDER BY status, priority" \
   --max-results 50 --json
 ```
 
@@ -107,6 +107,8 @@ Cross-reference against Section B findings.
 
 Read the ticket title and description. Map keywords to repos:
 
+> **CUSTOMIZE** — Replace the table below with your project's repos and their associated keywords.
+
 | Keywords | Repo |
 |---|---|
 | API, endpoint, handler, use case, dominio, entidad, repositorio, Go, JWT, auth, migración SQL, booking, quinta, imagen | `QuintaApp-Api` |
@@ -116,6 +118,8 @@ Read the ticket title and description. Map keywords to repos:
 If ambiguous or the ticket mentions multiple areas → mark all relevant repos as affected.
 
 ### A.2 — Read project context for each affected repo (in parallel)
+
+> **CUSTOMIZE** — Replace the per-repo blocks below with your project's directory structure and architecture rules.
 
 **For QuintaApp-Api** (if affected):
 ```bash
@@ -204,12 +208,12 @@ Surface cross-project impact if found.
 
 **Problem being solved**: ...
 **Approach requested by ticket**: ...
-**Repos affected**: [QuintaApp-Api | QuintaApp-Frontend | CloudHubCorp]
+**Repos affected**: [list of detected repos]
 **Codebase findings**: (existing code, patterns, utilities discovered — per repo)
 **Architecture impact**:
-  - QuintaApp-Api: [layers touched: domain / port / service / handler / mysql]
-  - QuintaApp-Frontend: [features / services / components affected]
-  - CloudHubCorp: [modules / routes / DB tables affected]
+  - [repo-1]: [layers / areas affected]
+  - [repo-2]: [layers / areas affected]
+  - [repo-N]: [layers / areas affected — one line per affected repo]
 **Memory context**:
   - 🔴 Errores previos aplicables: (omitir si no hay)
   - 🟢 Patrones detectados: (omitir si no hay)
@@ -319,7 +323,7 @@ _Generado por /assess — <ISO date>_
 
 Post it:
 ```bash
-JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/workflow/jira-comment.py add "<TICKET_ID>" "<comment text>"
 ```
 
@@ -328,7 +332,7 @@ uv run $JIRA_SKILL/workflow/jira-comment.py add "<TICKET_ID>" "<comment text>"
 Check ticket description length from Step 0 JSON output. If thin, add labels to flag it and update with a structured description:
 
 ```bash
-JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+JIRA_SKILL=${JIRA_SCRIPTS}
 
 # Add label to signal the ticket has been technically assessed
 uv run $JIRA_SKILL/core/jira-issue.py update "<TICKET_ID>" --labels "assessed"
@@ -356,7 +360,7 @@ Notas técnicas: ver comentario de análisis técnico.
 ### H.3 — Transition to In Progress (if fresh start and user confirmed)
 
 ```bash
-JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/workflow/jira-transition.py do "<TICKET_ID>" "In Progress"
 ```
 
@@ -413,15 +417,14 @@ assessment = {
     'ticket_id': '<TICKET_ID>',
     'date': datetime.datetime.utcnow().isoformat() + 'Z',
     'summary': '<problem being solved — one sentence>',
-    'repos_affected': ['<QuintaApp-Api|QuintaApp-Frontend|CloudHubCorp>'],
+    'repos_affected': ['<detected-repo-name>'],  # list all affected repos
     'recommended_approach': '<confirmed approach>',
     'confidence_score': 0.0,
     'concerns': ['<⚠️ items — empty if none>'],
     'key_files': ['<most relevant files — relative to workspace root>'],
     'architecture_impact': {
-        'QuintaApp-Api': '<layers touched or null>',
-        'QuintaApp-Frontend': '<areas touched or null>',
-        'CloudHubCorp': '<modules touched or null>'
+        # one key per affected repo, value describes layers/areas touched (or null)
+        '<repo-name>': '<layers touched or null>'
     },
     'jira_doc_generated': True,
     'open_questions_resolved': ['<question: answer>'],

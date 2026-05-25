@@ -1,6 +1,6 @@
 ---
 name: reflect
-description: "Snapshot and self-reflection for MSoftIA tickets. Run at any point in the ticket lifecycle: saves a snapshot (checkpoint mode) or runs a full closing reflection with Jira comment and memory persistence (closing mode). Auto-triggers when user says 'reflect MSOF-XXX', 'cierre MSOF-XXX', or 'closing MSOF-XXX'."
+description: "Snapshot and self-reflection for tickets. Run at any point in the ticket lifecycle: saves a snapshot (checkpoint mode) or runs a full closing reflection with Jira comment and memory persistence (closing mode)."
 allowed-tools: Bash Read Write
 ---
 
@@ -86,7 +86,7 @@ gh pr list --head feature/<TICKET_ID> --json state,mergedAt --state all | head -
 Run in parallel:
 
 ```bash
-JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
 git fetch origin
 git branch --show-current
@@ -134,7 +134,7 @@ snapshot = {
         'branch': '<feature/MSOF-XXX or fix/MSOF-XXX>',
         'pr_url': '<PR URL or null>',
         'pr_state': '<open|changes_requested|approved|merged|null>',
-        'jira_url': 'https://msoftia.atlassian.net/browse/<TICKET_ID>',
+        'jira_url': '${JIRA_BASE_URL}/browse/<TICKET_ID>',
         'key_files': ['<files most central to the implementation>'],
         'ai_memory': f'{WS}/.ai-memory/tickets/<TICKET_ID>.json'
     },
@@ -434,7 +434,7 @@ Do not interrupt the flow for I/O errors — if both fail, continue silently.
 ## Step 8 — Jira transition to Done (closing mode only — automatic, no authorization needed)
 
 ```bash
-JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/workflow/jira-transition.py do "<TICKET_ID>" "Done"
 ```
 
@@ -460,7 +460,7 @@ except Exception:
 ```
 
 ```bash
-JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/workflow/jira-comment.py add "<TICKET_ID>" "Ticket completado
 
 Resumen: <one paragraph describing what was implemented — plain text, no markdown>

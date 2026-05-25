@@ -1,10 +1,10 @@
 ---
 name: dev
-description: "Main MSoftIA development orchestrator. Accepts a MSOF-XXX ticket ID, a PR URL (own PR), or 'review <PR URL>' (teammate's PR). Routes to the correct phase: technical assessment, branch setup, development, validation, commit, push, PR creation, or review handling. Also accepts subcommands: 'MSOF-XXX migration', 'MSOF-XXX resume', 'MSOF-XXX reflect', 'MSOF-XXX status'. Auto-triggers when user says 'arrancar MSOF-XXX', 'trabajar en MSOF-XXX', 'retomar MSOF-XXX', or 'empezar ticket MSOF-XXX'."
+description: "Main development orchestrator. Accepts a PROJ-XXX ticket ID, a PR URL (own PR), or 'review <PR URL>' (teammate's PR). Routes to the correct phase: technical assessment, branch setup, development, validation, commit, push, PR creation, or review handling. Also accepts subcommands: 'PROJ-XXX migration', 'PROJ-XXX resume', 'PROJ-XXX reflect', 'PROJ-XXX status'."
 allowed-tools: Bash Read Write
 ---
 
-# Dev — MSoftIA Development Workflow
+# Dev — Development Workflow
 
 Execute the full development workflow for: **$ARGUMENTS**
 
@@ -63,7 +63,7 @@ gh pr view "$ARGUMENTS" --json title,body,headRefName,baseRefName,state,url,revi
 1. Extract ticket ID from the branch name (e.g. `feature/msof-42` → `MSOF-42`).
 2. Read the Jira ticket:
    ```bash
-   JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+   JIRA_SKILL=${JIRA_SCRIPTS}
    uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
    ```
 3. Rename session: `/rename MSOF-XXX | <ticket summary>`
@@ -111,6 +111,8 @@ Read in parallel (from the checked-out branch):
 #### Step 3 — Review analysis
 
 Evaluate across these dimensions in order of severity.
+
+> **CUSTOMIZE** — The blocking rules below are examples for a Go hexagonal API + React frontend + PHP multi-tenant stack. Replace with your project's architecture and conventions.
 
 **Blocking** (must be fixed before merging):
 
@@ -234,7 +236,7 @@ Apply the profile throughout this session:
 
 **Step 1 — Read Jira ticket:**
 ```bash
-JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
 ```
 
@@ -270,7 +272,7 @@ If snapshot exists, use it to fast-track context. Still run git/PR checks to ver
 ```bash
 # Detect base branch for this repo
 REPO_NAME=$(basename <repo_path>)
-BASE_BRANCH=$( [ "$REPO_NAME" = "CloudHubCorp" ] && echo "develop" || echo "master" )
+BASE_BRANCH=$( [ "$REPO_NAME" = "${SPECIAL_REPO}" ] && echo "${SPECIAL_REPO_BASE}" || echo "master" )
 
 git -C <repo_path> log $BASE_BRANCH..HEAD --oneline
 git -C <repo_path> status
@@ -329,7 +331,7 @@ Detect the repo(s) affected by the ticket (from Phase 0.5). For each affected re
 
 ```bash
 REPO_NAME=$(basename <repo_path>)
-BASE_BRANCH=$( [ "$REPO_NAME" = "CloudHubCorp" ] && echo "develop" || echo "master" )
+BASE_BRANCH=$( [ "$REPO_NAME" = "${SPECIAL_REPO}" ] && echo "${SPECIAL_REPO_BASE}" || echo "master" )
 
 # Branch prefix from ticket context:
 # feature/msof-XXX for new features
@@ -359,7 +361,7 @@ git -C <repo_path> rev-list --count origin/$BASE_BRANCH..$BRANCH_NAME   # how fa
 Applied if the user confirmed it in `/assess`. Skip if already In Progress or branch already existed.
 
 ```bash
-JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/workflow/jira-transition.py do "<TICKET_ID>" "In Progress"
 ```
 
@@ -542,8 +544,8 @@ print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
 cat $WS/.ai-memory/snapshots/<TICKET_ID>.json 2>/dev/null
 
-for REPO in QuintaApp-Api QuintaApp-Frontend CloudHubCorp; do
-  BASE=$( [ "$REPO" = "CloudHubCorp" ] && echo "develop" || echo "master" )
+for REPO in ${REPOS}; do
+  BASE=$( [ "$REPO" = "${SPECIAL_REPO}" ] && echo "${SPECIAL_REPO_BASE}" || echo "master" )
   git -C $WS/$REPO fetch origin -q 2>/dev/null
   BRANCH=$(git -C $WS/$REPO branch -a | grep -i "<TICKET_ID>" | head -1 | xargs)
   [ -n "$BRANCH" ] && echo "$REPO: $BRANCH" && git -C $WS/$REPO log $BASE..HEAD --oneline 2>/dev/null | head -3
@@ -578,8 +580,8 @@ p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
 
-for REPO in QuintaApp-Api QuintaApp-Frontend CloudHubCorp; do
-  git -C $WS/$REPO branch -a 2>/dev/null | grep -oiE "(feature|fix)/msof-[0-9]+" | sort -u
+for REPO in ${REPOS}; do
+  git -C $WS/$REPO branch -a 2>/dev/null | grep -oiE "(feature|fix)/${PROJECT_KEY_LOWER}-[0-9]+" | sort -u
 done | sort -u
 ```
 
@@ -641,7 +643,7 @@ Triggered by: `/dev msof-XXX resume`
 
 Run in parallel:
 ```bash
-JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
 
 WS=$(python3 -c "
@@ -656,8 +658,8 @@ print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 cat $WS/.ai-memory/snapshots/<TICKET_ID>.json 2>/dev/null
 cat $WS/.ai-memory/assessments/<TICKET_ID>.json 2>/dev/null
 
-for REPO in QuintaApp-Api QuintaApp-Frontend CloudHubCorp; do
-  BASE=$( [ "$REPO" = "CloudHubCorp" ] && echo "develop" || echo "master" )
+for REPO in ${REPOS}; do
+  BASE=$( [ "$REPO" = "${SPECIAL_REPO}" ] && echo "${SPECIAL_REPO_BASE}" || echo "master" )
   BRANCH=$(git -C $WS/$REPO branch -a | grep -i "<TICKET_ID>" | head -1 | tr -d ' ')
   if [ -n "$BRANCH" ]; then
     echo "=== $REPO ==="

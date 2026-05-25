@@ -1,6 +1,6 @@
 ---
 name: pr
-description: "Create a pull request or handle review comments for a MSOF-XXX ticket. Phase 1: pre-PR scan, build PR body, create PR via gh, post Jira comment, run /ultrareview. Phase 2 (subcommand 'review'): record review round, implement fixes, validate, commit, push. Auto-triggers when user says 'crear PR MSOF-XXX', 'abrir PR MSOF-XXX', 'PR MSOF-XXX', or 'revisar PR MSOF-XXX'."
+description: "Create a pull request or handle review comments for a ticket. Phase 1: pre-PR scan, build PR body, create PR via gh, post Jira comment, run /ultrareview. Phase 2 (subcommand 'review'): record review round, implement fixes, validate, commit, push."
 allowed-tools: Bash Read Write
 ---
 
@@ -22,8 +22,8 @@ REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
 REPO_NAME=$(basename "$REPO_ROOT")
 
 # Determine base branch and diff base
-if [ "$REPO_NAME" = "CloudHubCorp" ]; then
-  BASE_BRANCH="develop"
+if [ "$REPO_NAME" = "${SPECIAL_REPO}" ]; then
+  BASE_BRANCH="${SPECIAL_REPO_BASE}"
 else
   BASE_BRANCH="master"
 fi
@@ -136,7 +136,7 @@ EOF
 After the PR is created, capture the URL from the `gh pr create` output, then post a Jira comment automatically (no authorization needed):
 
 ```bash
-JIRA_SKILL=/home/jorge/.claude/skills/jira-communication/scripts
+JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/workflow/jira-comment.py add "<TICKET_ID>" "PR abierto
 
 Titulo: [$PR_PREFIX][<TICKET_ID>] <brief description>
