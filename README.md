@@ -28,6 +28,96 @@ Autonomous AI software engineer workflow that transforms Jira tickets into produ
     └── /reflect PROJ-XXX     ← closing reflection + memory
 ```
 
+## Usage
+
+### Starting a new ticket
+
+```
+/dev PROJ-42
+```
+
+Claude reads the Jira ticket, runs a technical assessment (`/assess`), and waits for your confirmation before touching any code. One reply is all it takes to kick off development.
+
+What happens automatically:
+- Reads Jira ticket and any related epic
+- Explores the codebase for existing patterns and affected files
+- Checks `.ai-memory/` for decisions and mistakes from past tickets
+- Presents a **Technical Assessment** with confidence score
+- Creates the branch, transitions the ticket to *In Progress*, and starts development
+
+---
+
+### Resuming work after a break
+
+```
+/dev PROJ-42 resume
+```
+
+Reconstructs full context from the branch, commits, snapshot, and Jira ticket. Tells you exactly what's done, what's in progress, and what's next — including a ready-to-paste standup line.
+
+---
+
+### Creating a PR
+
+Once development is done and pushed:
+
+```
+/pr PROJ-42
+```
+
+Scans the diff for issues, builds the PR body from tests and specs, creates the PR against the correct base branch, posts a Jira comment with the PR link, and runs `/ultrareview` automatically.
+
+---
+
+### Handling review comments
+
+When your PR gets review comments:
+
+```
+/dev https://github.com/your-org/repo/pull/123
+```
+
+Or from inside the repo:
+
+```
+/pr PROJ-42 review
+```
+
+Reads the review comments, implements the fixes, re-runs validation, commits, and asks for push authorization.
+
+---
+
+### Reviewing a teammate's PR
+
+```
+/dev review https://github.com/your-org/repo/pull/456
+```
+
+Checks out the branch, reads the full diff in context, and produces a peer-style review — no bot structure, just plain observations and a verdict. Optionally posts it to GitHub.
+
+---
+
+### Closing a ticket
+
+After the PR is merged:
+
+```
+/reflect PROJ-42 closing
+```
+
+Saves a closing reflection, updates `.ai-memory/` with decisions and learnings, transitions the Jira ticket to *Done*, and posts a closing comment.
+
+---
+
+### Quick status check
+
+```
+/dev PROJ-42 status     # single ticket — 6-line summary
+/dev status             # all active branches across all repos
+```
+
+---
+
 ## Subcommands
 
 | Command | Action |
