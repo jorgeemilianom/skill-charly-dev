@@ -43,21 +43,20 @@ Autonomous AI software engineer workflow that transforms Jira tickets into produ
 
 ## Installation
 
-Copy the skills you want into `~/.claude/skills/`:
-
 ```bash
-mkdir -p ~/.claude/skills/dev ~/.claude/skills/assess ~/.claude/skills/pr ~/.claude/skills/reflect
-
-curl -o ~/.claude/skills/dev/SKILL.md     https://raw.githubusercontent.com/jorgeemilianom/skill-charly-dev/master/dev/SKILL.md
-curl -o ~/.claude/skills/assess/SKILL.md  https://raw.githubusercontent.com/jorgeemilianom/skill-charly-dev/master/assess/SKILL.md
-curl -o ~/.claude/skills/pr/SKILL.md      https://raw.githubusercontent.com/jorgeemilianom/skill-charly-dev/master/pr/SKILL.md
-curl -o ~/.claude/skills/reflect/SKILL.md https://raw.githubusercontent.com/jorgeemilianom/skill-charly-dev/master/reflect/SKILL.md
+git clone https://github.com/jorgeemilianom/skill-charly-dev.git
+cd skill-charly-dev
+./install.sh
 ```
+
+The script copies each `SKILL.md` into `~/.claude/skills/<name>/`, skips files that are already up to date, and checks that required dependencies are present.
 
 ### Requirements
 
-- [Claude Code](https://claude.ai/code) CLI
-- [`gh`](https://cli.github.com/) — GitHub CLI (authenticated)
-- [`uv`](https://github.com/astral-sh/uv) — Python package manager
-- Jira account at `msoftia.atlassian.net` with `JIRA_TOKEN` env var
-- `.ai-memory/` directory at the workspace root (auto-created by the workflow)
+| Tool | Required | Purpose |
+|------|----------|---------|
+| [Claude Code](https://claude.ai/code) | ✅ | runs the skills |
+| [`gh`](https://cli.github.com/) | ✅ | create PRs, checkout branches, post reviews |
+| [`uv`](https://github.com/astral-sh/uv) | ✅ | runs the Jira Python scripts |
+| `JIRA_TOKEN` env var | ✅ | authenticate against `msoftia.atlassian.net` |
+| `.ai-memory/` at workspace root | auto-created | snapshots, assessments, user profile |
