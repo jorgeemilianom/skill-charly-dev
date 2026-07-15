@@ -29,14 +29,19 @@ export SPECIAL_REPO_PATTERNS=""
 export SPECIAL_REPO_BASE="develop"
 
 # ── DB sync (optional) ───────────────────────
-# Repos that support the "db-sync" subcommand (Phase 15 in dev/SKILL.md) —
+# Repos that support the "db-sync" subcommand (dev-db-sync/SKILL.md) —
 # i.e. have a Makefile with backup/import targets for pulling a prod DB snapshot.
 # Leave empty to disable db-sync entirely.
 export DB_SYNC_REPOS=""
 
+# ── Cross-tool adapter (optional) ────────────
+# Path to this project's Claude Code auto-memory index (~/.claude/projects/<escaped-path>/memory/MEMORY.md).
+# Referenced from agent-context.md as a legacy fallback so Codex can see it too. Leave empty to omit.
+export CLAUDE_MEMORY_INDEX=""
+
 # ── Notes ────────────────────────────────────
-# After editing this file, run ./install.sh to regenerate the skills:
-#   cd ~/skills/charly-dev && ./install.sh
+# Run ./install.sh FROM INSIDE the target project (the directory containing this
+# project's CLAUDE.md) — it installs into <project>/.ai/skills, not a global location.
 #
-# To update skills after a git pull:
-#   git pull && ./install.sh
+# To update after a git pull:
+#   cd /path/to/skill-charly-dev && git pull && (cd /path/to/your/project && /path/to/skill-charly-dev/install.sh)

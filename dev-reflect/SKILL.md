@@ -1,6 +1,6 @@
 ---
-name: reflect
-description: "Snapshot and self-reflection for tickets. Run at any point in the ticket lifecycle: saves a snapshot (checkpoint mode) or runs a full closing reflection with Jira comment and memory persistence (closing mode)."
+name: dev-reflect
+description: "Snapshot and self-reflection for tickets. Run at any point in the ticket lifecycle: saves a snapshot (checkpoint mode) or runs a full closing reflection with Jira comment and memory persistence (closing mode). Delegated to by /dev for the 'reflect' subcommand."
 allowed-tools: Bash Read Write
 ---
 

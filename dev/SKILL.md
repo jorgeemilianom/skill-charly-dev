@@ -1,23 +1,19 @@
 ---
 name: dev
-description: "Main development orchestrator. Accepts a PROJ-XXX ticket ID, a PR URL (own PR), or 'review <PR URL>' (teammate's PR). Routes to the correct phase: technical assessment, branch setup, development, validation, commit, push, PR creation, or review handling. Also accepts subcommands: 'PROJ-XXX migration', 'PROJ-XXX resume', 'PROJ-XXX reflect', 'PROJ-XXX status'."
+description: "Main development orchestrator. Accepts a PROJ-XXX ticket ID, a freeform idea with no ticket yet, a PR URL (own PR), or 'review <PR URL>' (teammate's PR). Runs the core ticket loop (branch setup, development, validation, commit, push) and routes everything else to sibling dev-* skills: dev-create, dev-assess, dev-pr, dev-reflect, dev-resume, dev-review, dev-migration, dev-status, dev-db-sync."
 allowed-tools: Bash Read Write
 ---
 
-# Dev — Development Workflow
+# Dev — Development Workflow Orchestrator
 
-Execute the full development workflow for: **$ARGUMENTS**
+Execute the development workflow for: **$ARGUMENTS**
 
 `$ARGUMENTS` can be:
-- A ticket ID: `msof-XXX`
-- A PR URL (your own PR): `https://github.com/.../pull/123`
-- `review <PR URL>` — code review for a teammate's PR
-- A ticket ID with a subcommand:
-  - `msof-XXX migration` — run DB migration workflow (QuintaApp-Api)
-  - `msof-XXX resume` — reconstruct development context + standup
-  - `msof-XXX reflect` — post-ticket reflection + memory persistence (→ `/reflect`)
-  - `msof-XXX status` — quick ticket state — no workflow started
-- `db-sync <project>` — pull a fresh DB snapshot from production (no ticket needed; requires `${DB_SYNC_REPOS}` to be set)
+- A ticket ID: `msof-XXX` — runs the full core loop (Entry point A)
+- A freeform idea/requirement with no ticket ID yet — routes to `/dev-create`
+- A PR URL (your own PR): `https://github.com/.../pull/123` — Entry point B
+- `review <PR URL>` — routes to `/dev-review`
+- A ticket ID with a subcommand — routes to the matching sibling skill
 
 ---
 
@@ -40,19 +36,20 @@ Parse `$ARGUMENTS` and dispatch immediately.
 
 | Argument | Action |
 |----------|--------|
-| starts with `review ` + URL | Entry point C — External code review (reviewer) |
-| URL containing `http` or `/pull/` | Entry point B — Own PR (resume/review comments) |
-| `msof-XXX migration` | Inline migration workflow — Phase 2b |
-| `msof-XXX resume` | Phase 12 — Resume development context |
-| `msof-XXX reflect` | → `/reflect <TICKET_ID>` (auto-detects mode by PR state) |
-| `msof-XXX status` | Phase 5b — Quick read-only state |
-| `status` (no ticket ID) | Phase 5c — Multi-ticket overview |
-| `msof-XXX` (no subcommand) | Entry point A — full workflow |
-| `db-sync <project>` | Phase 15 — DB sync from production VPS (no ticket needed) |
-| `msof-XXX db-sync <project>` | Phase 15 — DB sync from production VPS (ticket for context) |
-| `db-sync config <project>` | Phase 15 Step 0 — reconfigure VPS settings for a project |
+| freeform idea/description, no ticket ID | → `/dev-create` |
+| starts with `review ` + URL | → `/dev-review` |
+| URL containing `http` or `/pull/` | Entry point B (below) — Own PR |
+| `msof-XXX migration` | → `/dev-migration <TICKET_ID>` |
+| `msof-XXX resume` | → `/dev-resume <TICKET_ID>` |
+| `msof-XXX reflect` | → `/dev-reflect <TICKET_ID>` |
+| `msof-XXX status` | → `/dev-status <TICKET_ID>` |
+| `status` (no ticket ID) | → `/dev-status` |
+| `msof-XXX` (no subcommand) | Entry point A (below) — full core loop |
+| `db-sync <project>` | → `/dev-db-sync <project>` |
+| `msof-XXX db-sync <project>` | → `/dev-db-sync <project>` (ticket ID for context only) |
+| `db-sync config <project>` | → `/dev-db-sync config <project>` |
 
-For delegated skills: invoke the target with the ticket ID and follow its instructions. Do not proceed to any other phase.
+For routed sibling skills: invoke the target with the arguments and follow its instructions entirely. Do not proceed to any other phase in this file.
 
 ---
 
@@ -73,142 +70,11 @@ gh pr view "$ARGUMENTS" --json title,body,headRefName,baseRefName,state,url,revi
 3. Rename session: `/rename MSOF-XXX | <ticket summary>`
 4. Check out the branch: `git fetch origin && git checkout <branch>`
 5. Show state: `git log master..HEAD --oneline && git status`
-6. Invoke `/pr <TICKET_ID> review` with the detected review comments.
+6. Invoke `/dev-pr <TICKET_ID> review` with the detected review comments.
 
 ---
 
-### Entry point C — External code review (reviewer)
-
-Triggered when argument starts with `review ` followed by a PR URL.
-
-Extract `<PR_URL>` from arguments (everything after `review `).
-
-#### Step 1 — Fetch PR context
-
-Save the current branch:
-```bash
-CURRENT_BRANCH=$(git branch --show-current)
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
-REPO_NAME=$(basename "$REPO_ROOT")
-```
-
-Run in parallel:
-```bash
-gh pr view "<PR_URL>" --json title,body,headRefName,baseRefName,state,url,author,additions,deletions,changedFiles,reviews,comments
-gh pr diff "<PR_URL>"
-```
-
-Check out the PR branch for full-file reads:
-```bash
-gh pr checkout "<PR_URL>"
-```
-
-Rename session: `/rename review | <PR title>`
-
-#### Step 2 — Load project conventions
-
-Read in parallel (from the checked-out branch):
-- `CLAUDE.md` of the current repo (architecture rules)
-- `Makefile` (build, test, lint targets)
-- Full content of each file in the diff (not just changed lines) for surrounding context
-
-#### Step 3 — Review analysis
-
-Evaluate across these dimensions in order of severity.
-
-> **CUSTOMIZE** — The blocking rules below are examples for a Go hexagonal API + React frontend + PHP multi-tenant stack. Replace with your project's architecture and conventions.
-
-**Blocking** (must be fixed before merging):
-
-*QuintaApp-Api (Go hexagonal):*
-- **Architecture violation**: use-case importing infrastructure; handler containing business logic; service depending on concrete adapter (not interface); domain entity importing from adapters layer
-- **Error handling**: domain error not defined in `errors.go`; error not mapped in `mapError()` in `response.go`; wrong HTTP status returned for a domain error type
-- **Coverage regression**: new logic added without tests; coverage in `./internal/core/...` or `./internal/adapters/primary/...` drops below 80%
-- **JWT misuse**: refresh token used as access token (missing `Type` field validation); token not validated with `middleware.Auth()`
-- **Test fixture issues**: `time.Now()` in booking tests (causes float precision drift in TotalPrice — use fixed `time.Date(...)` instead); `bcrypt.DefaultCost` in tests (too slow — use `bcrypt.MinCost`)
-- **OpenAPI drift**: handler endpoint changed but `spec_openapi/openapi.yaml` not updated
-
-*QuintaApp-Frontend (React):*
-- **Direct fetch**: API call in a component or hook without going through `src/services/apiClient.js`
-- **Missing test file**: new component added without a `.test.jsx` file alongside it
-- **Hardcoded URL**: API URL not read from `import.meta.env.VITE_API_URL`
-- **Auth bypass**: token not read from `localStorage.access_token` or Bearer header missing
-
-*CloudHubCorp (PHP multi-tenant):*
-- **Missing `business_id`**: SQL query without `business_id` scope — data leak between tenants
-- **Forbidden HTTP methods**: using `PUT` or `DELETE` — only `POST` and `GET` are allowed
-- **Missing auth middleware**: route without `# useMiddleware` or `middleware:` attribute on a protected endpoint
-- **Wrong file header**: PHP file not starting with `<?php #Business Hub Corp Framework` + `declare(strict_types=1);`
-- **Backoffice not rebuilt**: Backoffice-related changes without `make build` in the last commits
-- **Module naming violation**: core module using `m_` prefix, or add-on module missing `m_` prefix
-
-**Non-blocking** (improvements/style):
-
-- Debug output left in: `fmt.Println`, `console.log`, `var_dump`, `dd()`
-- TODO/FIXME without a linked Jira issue
-- Magic strings or numbers that belong in named constants
-- Comments explaining WHAT code does (vs. non-obvious WHY/invariant/workaround)
-- Commit message not matching `<TICKET_ID> | <description>` format
-- 4-space indentation missing in PHP files (tabs are wrong)
-
-**Positive observations** (call out explicitly):
-
-- Good reuse of existing utilities instead of reinventing
-- Well-structured error handling with correct domain error type
-- Thoughtful test coverage including edge cases
-- Clear naming that makes the code self-documenting
-
-#### Step 4 — Present the review
-
-Write it as a peer would — no section headers, no tables, no bot structure.
-
-Format rules:
-- Lead with one short line: overall impression + verdict signal (nothing if all good, "un par de cosas" if minor, "hay cosas que bloquean" if blocking).
-- List only real findings. Each item: `` `file:line` `` + short explanation in plain language — say the fix inline, no "Fix:" label.
-- If something is genuinely good and non-obvious, mention it in one line at the end.
-- End with one line: verdict ("LGTM", "LGTM con los cambios", "necesito los cambios antes de aprobar").
-- Write in the same language the PR description uses. If mixed, use Spanish.
-- No markdown headers (`###`), no `**Blocking**`, no checkboxes.
-
-Example:
-```
-Luce bien en general, un par de cosas antes de aprobar:
-
-- `internal/adapters/primary/http/handlers/booking.go:87` falta agregar este error en `mapError()` — sin eso devuelve 500 en lugar del status correcto
-- `src/features/bookings/BookingForm.jsx:34` el fetch debería ir por `apiClient`, no con `fetch()` directo
-
-El manejo del JWT está bien estructurado.
-
-LGTM con los cambios.
-```
-
-#### Step 5 — Post review (optional)
-
-Ask: "¿Publico el review en GitHub?"
-
-If confirmed, post the **same text from Step 4** (no reformatting):
-```bash
-# Request changes:
-gh pr review "<PR_URL>" --request-changes --body "<review text>"
-
-# Approve:
-gh pr review "<PR_URL>" --approve --body "<review text>"
-
-# Comment only:
-gh pr review "<PR_URL>" --comment --body "<review text>"
-```
-
-Pick based on verdict: blocking → `--request-changes`, all good → `--approve`, informational → `--comment`.
-
-#### Step 6 — Restore your branch
-
-```bash
-git checkout "$CURRENT_BRANCH"
-```
-
----
-
-### Entry point A — Ticket ID (full workflow)
+### Entry point A — Ticket ID (full core loop)
 
 **Step 0 — Load user profile (silent — adapt behavior, no output):**
 
@@ -247,8 +113,8 @@ uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
 **Step 2 — Rename session:** `/rename MSOF-XXX | <ticket summary>`
 
 **Step 3 — Migration detection:** Scan ticket title and description for "migración", "migration", "DDL", "ALTER", "schema change", "data migration". If found:
-> "Este ticket parece requerir un flujo de migración en QuintaApp-Api. ¿Lo proceso con el flujo de migrations?"
-If confirmed → Phase 2b (migration workflow), stop here.
+> "Este ticket parece requerir un flujo de migración en QuintaApp-Api. ¿Lo proceso con `/dev-migration`?"
+If confirmed → invoke `/dev-migration <TICKET_ID>`, stop here.
 
 **Step 4 — Check branch state** across all three repos:
 ```bash
@@ -287,7 +153,7 @@ git -C <repo_path> rev-list HEAD..origin/$BASE_BRANCH --count   # drift check
 Auto-proceed to the most logical phase based on state:
 - Uncommitted changes or staged files → Phase 3 (development)
 - Clean tree, no PR yet → Phase 6 (push)
-- PR open with `CHANGES_REQUESTED` → Phase 8 (review handling)
+- PR open with `CHANGES_REQUESTED` → `/dev-pr <TICKET_ID> review`
 - PR open, no pending reviews → already at PR, monitor
 - Only when next step is genuinely ambiguous: present state and ask
 
@@ -299,13 +165,13 @@ Auto-proceed to the most logical phase based on state:
 
 **Applies to**: every fresh start and resumed branches before continuing development.
 
-Delegated entirely to `/assess`. Invoke it and follow its instructions:
+Delegated entirely to `/dev-assess`. Invoke it and follow its instructions:
 
 ```
-/assess <TICKET_ID>
+/dev-assess <TICKET_ID>
 ```
 
-`/assess` handles everything in **one combined confirmation**:
+`/dev-assess` handles everything in **one combined confirmation**:
 - Detects affected repos and does architecture-aware codebase exploration
 - Loads `.ai-memory/` context (historical patterns, decisions, mistakes)
 - Queries the Jira epic in parallel
@@ -362,51 +228,11 @@ git -C <repo_path> rev-list --count origin/$BASE_BRANCH..$BRANCH_NAME   # how fa
 
 ### Jira transition to "In Progress"
 
-Applied if the user confirmed it in `/assess`. Skip if already In Progress or branch already existed.
+Applied if the user confirmed it in `/dev-assess`. Skip if already In Progress or branch already existed.
 
 ```bash
 JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/workflow/jira-transition.py do "<TICKET_ID>" "In Progress"
-```
-
----
-
-## Phase 2b: Migration Workflow (QuintaApp-Api only)
-
-Triggered by subcommand `migration` or when migration is detected and confirmed.
-
-**Step 1 — Check pending migrations:**
-```bash
-make -C QuintaApp-Api migrate-check 2>/dev/null || \
-  make -C QuintaApp-Api migrate-status 2>/dev/null
-```
-
-**Step 2 — Create migration file** (if adding a new one):
-```bash
-# Asks for migration name interactively
-make -C QuintaApp-Api migrate-create
-```
-Name format: `<short_description>_<TICKET_ID_LOWERCASE>` (e.g. `add_reviews_table_msof42`)
-
-**Step 3 — Write migration SQL** in the generated files (up and down scripts).
-
-**Step 4 — Review before running:**
-- Does the `down` script fully reverse the `up` script?
-- Any data-destructive operations (DROP COLUMN, TRUNCATE)?
-- Impact on existing rows?
-
-**Step 5 — Ask for authorization** before running:
-> "Voy a correr `make migrate-up` en QuintaApp-Api. ¿Confirmás? (requiere DB_* env vars)"
-
-```bash
-make -C QuintaApp-Api migrate-up
-```
-
-**Step 6 — Verify and commit:**
-```bash
-make -C QuintaApp-Api test
-git add QuintaApp-Api/migrations/
-git commit -m "<TICKET_ID> | add migration <migration_name>"
 ```
 
 ---
@@ -532,72 +358,6 @@ Rules:
 
 ---
 
-## Phase 5b: Status subcommand
-
-Triggered by `msof-XXX status`. Read-only — no workflow started.
-
-```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-cat $WS/.ai-memory/snapshots/<TICKET_ID>.json 2>/dev/null
-
-for REPO in ${REPOS}; do
-  BASE="master"; case "$REPO" in ${SPECIAL_REPO_CASE_PATTERN}) BASE="${SPECIAL_REPO_BASE}";; esac
-  git -C $WS/$REPO fetch origin -q 2>/dev/null
-  BRANCH=$(git -C $WS/$REPO branch -a | grep -i "<TICKET_ID>" | head -1 | xargs)
-  [ -n "$BRANCH" ] && echo "$REPO: $BRANCH" && git -C $WS/$REPO log $BASE..HEAD --oneline 2>/dev/null | head -3
-done
-
-gh pr list --search "<TICKET_ID>" --json state,url,title --state all 2>/dev/null | head -3
-```
-
-Output format — exactly 6 lines, no markdown:
-```
-MSOF-XXX | <summary from snapshot or Jira title>
-Repos: <which repos have an active branch>  |  PR: <url or "no creado">  |  Estado PR: <open|changes_requested|approved|merged|none>
-Commits: <N commits total>  |  Cambios sin commitear: <yes/no>
-Próximo paso: <next_step from snapshot or inferred>
-Última actualización: <snapshot_date or "sin snapshot">
-```
-
----
-
-## Phase 5c: Multi-ticket status
-
-Triggered by `status` (no ticket ID). Read-only.
-
-```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-
-for REPO in ${REPOS}; do
-  git -C $WS/$REPO branch -a 2>/dev/null | grep -oiE "(feature|fix)/${PROJECT_KEY_LOWER}-[0-9]+" | sort -u
-done | sort -u
-```
-
-For each ticket found, collect in parallel and output one line:
-```
-MSOF-XXX  <phase>  |  <N> commits  |  PR: <state or "sin PR">  |  <next_step — 5 words max>
-```
-
-If no active branches: `"No hay branches activos de MSOF en este workspace."`
-
----
-
 ## Phase 6: Push
 
 - **Ask for explicit user authorization** before running `git push`.
@@ -611,267 +371,44 @@ If no active branches: `"No hay branches activos de MSOF en este workspace."`
 - Use `--force-with-lease` **only** after a rebase on top of origin base. Never to push an amended commit.
 
 After push:
-> "Push listo. ¿Guardo un checkpoint? (`/dev <TICKET_ID> reflect`)"
+> "Push listo. ¿Guardo un checkpoint? (`/dev-reflect <TICKET_ID>`)"
 
 ---
 
 ## Phase 7: Pull Request
 
-Delegated entirely to `/pr`. Invoke it with the ticket ID:
+Delegated entirely to `/dev-pr`. Invoke it with the ticket ID:
 
 ```
-/pr <TICKET_ID>
+/dev-pr <TICKET_ID>
 ```
 
-`/pr` will: run the pre-PR scan, build the PR body from test files and specs, create the PR against the correct base branch (`master` or `develop`), post a Jira comment, and run `/ultrareview`.
+`/dev-pr` will: run the pre-PR scan, build the PR body from test files and specs, create the PR against the correct base branch (`master` or `develop`), post a Jira comment, and run `/ultrareview`.
 
 ---
 
 ## Phase 8: Review Handling
 
-Delegated to `/pr` with the `review` subcommand:
+Delegated to `/dev-pr` with the `review` subcommand:
 
 ```
-/pr <TICKET_ID> review
+/dev-pr <TICKET_ID> review
 ```
 
-`/pr` will: record the review round in `.ai-memory/`, analyze each comment, implement fixes, re-run validation per repo, commit, and ask for push authorization.
+`/dev-pr` will: record the review round in `.ai-memory/`, analyze each comment, implement fixes, re-run validation per repo, commit, and ask for push authorization.
 
 ---
 
-## Phase 12: Resume Development Context
-
-Triggered by: `/dev msof-XXX resume`
-
-### Step 1 — Load ticket and branch state
-
-Run in parallel:
-```bash
-JIRA_SKILL=${JIRA_SCRIPTS}
-uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
-
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-cat $WS/.ai-memory/snapshots/<TICKET_ID>.json 2>/dev/null
-cat $WS/.ai-memory/assessments/<TICKET_ID>.json 2>/dev/null
-
-for REPO in ${REPOS}; do
-  BASE="master"; case "$REPO" in ${SPECIAL_REPO_CASE_PATTERN}) BASE="${SPECIAL_REPO_BASE}";; esac
-  BRANCH=$(git -C $WS/$REPO branch -a | grep -i "<TICKET_ID>" | head -1 | tr -d ' ')
-  if [ -n "$BRANCH" ]; then
-    echo "=== $REPO ==="
-    git -C $WS/$REPO log $BASE..HEAD --oneline
-    git -C $WS/$REPO status --short
-    gh pr list --head $(echo $BRANCH | sed 's|remotes/origin/||') \
-      --json number,title,state,url,reviews,reviewRequests,comments 2>/dev/null
-  fi
-done
-```
-
-Rename session: `/rename MSOF-XXX | <ticket summary>`
-
-### Step 2 — Read the actual changes
-
-For each file in the diff across affected repos, read its content to understand **what was implemented**, not just what changed. Focus on:
-- What logic was added or modified
-- What is partially done (started but not finished)
-- What the code reveals about the next step
-
-### Step 3 — Cross-reference against ticket requirements
-
-Compare what was implemented against what the ticket asks for. Determine:
-- What acceptance criteria are already satisfied
-- What is partially addressed
-- What has not been started yet
-
-### Step 4 — Present the resume summary
-
-```
-## Resumen de retomada — <TICKET_ID>
-
-### Qué se implementó
-- <bullet por cada cosa concreta ya hecha, basado en commits y código>
-
-### En progreso (incompleto)
-- <código que existe pero está a medio hacer, si hay>
-
-### Pendiente
-- <lo que el ticket pide y aún no está implementado>
-
-### Repos activos
-- <QuintaApp-Api: branch + N commits | QuintaApp-Frontend: idem | CloudHubCorp: idem>
-
-### Estado del PR
-- <no creado / abierto / cambios solicitados / aprobado>
-- <si hay review comments pendientes: listarlos>
-
-### Próximo paso concreto
-<una sola oración describiendo exactamente qué hacer primero al retomar>
-
----
-### Para la daily
-> "Estoy trabajando en [TICKET_ID]: [descripción breve].
-> [Lo que se hizo: 1-2 oraciones].
-> Hoy voy a [próximo paso]."
-```
-
-### Step 5 — Propose continuation
-
-> "¿Continuamos desde donde quedó? Puedo arrancar con [próximo paso concreto]."
-
-Proceed to the appropriate phase after confirmation.
-
----
-
-## Phase 14: Self-Reflection
-
-Triggered by: `/dev msof-XXX reflect`
-
-Delegated entirely to `/reflect`:
-
-```
-/reflect <TICKET_ID>
-```
-
-`/reflect` auto-detects the mode: if the PR is merged → closing mode (full reflection + Jira comment + memory persistence); otherwise → checkpoint mode (snapshot only).
-
----
-
-## Phase 15: DB Sync from Production
-
-Triggered by: `db-sync <project>` or `msof-XXX db-sync <project>`
-
-Requires `${DB_SYNC_REPOS}` to be set in `config.sh`. If empty, tell the user db-sync isn't configured for this workspace and stop.
-
-`<project>` must be one of: `${DB_SYNC_REPOS}`. If omitted, ask which project.
-
----
-
-### Step 0 — Load VPS config
-
-```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-cat $WS/.ai-memory/vps-config.json 2>/dev/null
-```
-
-**If the file does not exist**, run the first-time setup below and save it before continuing.
-
-#### First-time setup (interactive)
-
-Ask the user for the shared connection fields once, then the per-project fields for each entry in `${DB_SYNC_REPOS}`:
-
-```
-Host de la VPS productiva (ej: 123.45.67.89 o prod.ejemplo.com):
-Usuario SSH (ej: jorge):
-Ruta a la clave SSH (ej: ~/.ssh/id_rsa):
-
-Para cada proyecto en ${DB_SYNC_REPOS}:
-  Directorio en la VPS productiva (ej: /var/www/<project>):
-  Comando make para generar el backup (ej: db-backup):
-  Ruta del archivo de backup generado en la VPS (ej: /tmp/backup.sql):
-  Comando make para importar el backup localmente (ej: db-import FILE=):
-```
-
-Save to `$WS/.ai-memory/vps-config.json`, with one entry under `projects` per repo in `${DB_SYNC_REPOS}`:
-```json
-{
-  "production_vps": {
-    "host": "<host>",
-    "user": "<user>",
-    "key_path": "<key_path>",
-    "projects": {
-      "<project_name>": {
-        "remote_path": "<path>",
-        "backup_make_target": "<target>",
-        "remote_backup_file": "<path>",
-        "local_import_make_target": "<target>"
-      }
-    }
-  }
-}
-```
-
-To update a single field later: `db-sync config <project>` — re-asks only that project's fields.
-
----
-
-### Step 1 — Test SSH connectivity
-
-```bash
-ssh -i <key_path> -o ConnectTimeout=10 -o BatchMode=yes <user>@<host> "echo ok" 2>&1
-```
-
-If this fails, abort and show the SSH error — do not proceed.
-
----
-
-### Step 2 — Generate backup on the production VPS
-
-Confirm before running:
-> "Voy a conectarme a `<user>@<host>` y correr `make <backup_make_target>` en `<remote_path>`. ¿Confirmás?"
-
-```bash
-ssh -i <key_path> <user>@<host> "cd <remote_path> && make <backup_make_target>"
-```
-
-If the command fails, show stderr and abort.
-
----
-
-### Step 3 — Download the backup to this VPS
-
-Local destination: `$WS/.ai-memory/db-backups/<project>_<YYYY-MM-DD_HH-MM-SS>.sql`
-
-```bash
-mkdir -p $WS/.ai-memory/db-backups
-scp -i <key_path> <user>@<host>:<remote_backup_file> \
-    "$WS/.ai-memory/db-backups/<project>_$(date +%Y-%m-%d_%H-%M-%S).sql"
-```
-
-Confirm success by checking the downloaded file size:
-```bash
-ls -lh "$WS/.ai-memory/db-backups/<project>_<timestamp>.sql"
-```
-
-If file is 0 bytes or missing, abort with an error.
-
----
-
-### Step 4 — Optional import
-
-Ask:
-> "Backup descargado en `<local_path>` (<size>). ¿Lo importo en el entorno local de `<project>`?"
-
-If confirmed:
-```bash
-make -C $WS/<project> <local_import_make_target>"$WS/.ai-memory/db-backups/<downloaded_file>"
-```
-
-If the Makefile target does not exist, warn and suggest the user run the import manually, showing the exact file path.
-
----
-
-### Step 5 — Summary
-
-```
-DB Sync — <project>
-  Origen:   <user>@<host>:<remote_path>
-  Backup:   <local_path> (<size>)
-  Importado: sí / no
-  Timestamp: <datetime>
-```
+## Related sibling skills
+
+Not inlined here — each is independently invokable and has its own SKILL.md:
+
+- `/dev-create` — spec and file a brand-new ticket
+- `/dev-assess` — technical deep dive (Phase 0.5)
+- `/dev-pr` — create PR / handle review comments (Phases 7–8)
+- `/dev-reflect` — snapshot / closing reflection
+- `/dev-resume` — reconstruct context for a ticket already in progress
+- `/dev-review` — external code review of a teammate's PR (Entry point C)
+- `/dev-migration` — QuintaApp-Api DB migration workflow
+- `/dev-status` — read-only ticket/workspace state
+- `/dev-db-sync` — pull a production DB snapshot
