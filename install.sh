@@ -76,14 +76,21 @@ else
   warn "Copy config.example.sh → config.sh and fill in your values."
 fi
 
-# Only these vars are substituted; all other \${...} in bash blocks are preserved.
-SUBST_VARS='${JIRA_SCRIPTS}${PROJECT_KEY}${PROJECT_KEY_LOWER}${JIRA_BASE_URL}${REPOS}${SPECIAL_REPO}${SPECIAL_REPO_BASE}'
+# envsubst only replaces literal ${VAR} references — it doesn't evaluate bash
+# parameter expansions. Pre-compute the pipe-joined form here so templates can
+# drop it straight into a `case` pattern without needing SPECIAL_REPO_PATTERNS
+# to exist as a real env var at skill-execution time.
+export SPECIAL_REPO_CASE_PATTERN="${SPECIAL_REPO_PATTERNS// /|}"
 
-dim "JIRA_SCRIPTS  = ${JIRA_SCRIPTS:-<not set>}"
-dim "PROJECT_KEY   = ${PROJECT_KEY:-<not set>}"
-dim "JIRA_BASE_URL = ${JIRA_BASE_URL:-<not set>}"
-dim "REPOS         = ${REPOS:-<not set>}"
-dim "SPECIAL_REPO  = ${SPECIAL_REPO:-(none)} → base: ${SPECIAL_REPO_BASE:-master}"
+# Only these vars are substituted; all other \${...} in bash blocks are preserved.
+SUBST_VARS='${JIRA_SCRIPTS}${PROJECT_KEY}${PROJECT_KEY_LOWER}${JIRA_BASE_URL}${REPOS}${SPECIAL_REPO_PATTERNS}${SPECIAL_REPO_BASE}${SPECIAL_REPO_CASE_PATTERN}${DB_SYNC_REPOS}'
+
+dim "JIRA_SCRIPTS          = ${JIRA_SCRIPTS:-<not set>}"
+dim "PROJECT_KEY           = ${PROJECT_KEY:-<not set>}"
+dim "JIRA_BASE_URL         = ${JIRA_BASE_URL:-<not set>}"
+dim "REPOS                 = ${REPOS:-<not set>}"
+dim "SPECIAL_REPO_PATTERNS = ${SPECIAL_REPO_PATTERNS:-(none)} → base: ${SPECIAL_REPO_BASE:-master}"
+dim "DB_SYNC_REPOS         = ${DB_SYNC_REPOS:-(none, db-sync disabled)}"
 
 # ── 3. Generate and install ───────────────────
 heading "Installing skills to $SKILLS_DIR ..."
