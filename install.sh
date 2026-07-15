@@ -106,6 +106,30 @@ else
   warn "Copy config.example.sh → config.sh and fill in your values."
 fi
 
+# ── 3b. Vendor third-party scripts ────────────
+# The skills call out to the jira-communication CLI scripts. Rather than require
+# a separately-installed skill on every machine, a copy ships in this repo
+# (vendor/jira-communication/ — see its NOTICE.md for source/license) and gets
+# copied into the project on install. JIRA_SCRIPTS in config.sh, if set,
+# overrides this with your own installation instead.
+heading "Vendoring third-party scripts..."
+
+VENDOR_SRC="$REPO_DIR/vendor/jira-communication"
+VENDOR_DEST="$PROJECT_ROOT/.ai/vendor/jira-communication"
+if [[ -d "$VENDOR_SRC" ]]; then
+  mkdir -p "$(dirname "$VENDOR_DEST")"
+  rm -rf "$VENDOR_DEST"
+  cp -r "$VENDOR_SRC" "$VENDOR_DEST"
+  info "Vendored jira-communication scripts → .ai/vendor/jira-communication/"
+else
+  warn "No vendor/jira-communication found in $REPO_DIR — skipping"
+fi
+
+if [[ -z "${JIRA_SCRIPTS:-}" ]]; then
+  export JIRA_SCRIPTS="$VENDOR_DEST/scripts"
+  dim "JIRA_SCRIPTS not set in config.sh — defaulting to the vendored copy"
+fi
+
 # envsubst only replaces literal ${VAR} references — it doesn't evaluate bash
 # parameter expansions. Pre-compute the pipe-joined form here so templates can
 # drop it straight into a `case` pattern without needing SPECIAL_REPO_PATTERNS

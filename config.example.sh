@@ -4,9 +4,11 @@
 # config.sh is gitignored — never commit it.
 
 # ── Jira ─────────────────────────────────────
-# Path to the jira-communication scripts directory
-# (clone https://github.com/your-org/jira-communication or equivalent)
-export JIRA_SCRIPTS="/path/to/jira-communication/scripts"
+# Path to the jira-communication scripts directory.
+# Leave empty to use the copy vendored in this repo (vendor/jira-communication) —
+# install.sh copies it into your project automatically. Only set this to point
+# at your own separate jira-communication installation instead.
+export JIRA_SCRIPTS=""
 
 # Jira project key (uppercase). Used in issue IDs and search queries.
 export PROJECT_KEY="PROJ"
