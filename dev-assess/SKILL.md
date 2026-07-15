@@ -1,6 +1,6 @@
 ---
-name: assess
-description: "Technical deep dive before writing any code. Reads Jira, detects affected repos, explores the codebase with architecture-aware heuristics, loads .ai-memory context, produces a Technical Assessment, and — after one user confirmation — enriches the Jira ticket with structured documentation and transitions it to In Progress."
+name: dev-assess
+description: "Technical deep dive before writing any code. Reads Jira, detects affected repos, explores the codebase with architecture-aware heuristics, loads .ai-memory context, produces a Technical Assessment, and — after one user confirmation — enriches the Jira ticket with structured documentation and transitions it to In Progress. Delegated to by /dev before development starts."
 allowed-tools: Bash Read Write
 ---
 
@@ -318,7 +318,7 @@ h3. Plan de testing
 h3. Preguntas resueltas
 <each open question with its confirmed answer, or "Ninguna" if there were none>
 
-_Generado por /assess — <ISO date>_
+_Generado por /dev-assess — <ISO date>_
 ```
 
 Post it:

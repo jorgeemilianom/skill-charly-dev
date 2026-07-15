@@ -1,6 +1,6 @@
 ---
-name: pr
-description: "Create a pull request or handle review comments for a ticket. Phase 1: pre-PR scan, build PR body, create PR via gh, post Jira comment, run /ultrareview. Phase 2 (subcommand 'review'): record review round, implement fixes, validate, commit, push."
+name: dev-pr
+description: "Create a pull request or handle review comments for a ticket. Phase 1: pre-PR scan, build PR body, create PR via gh, post Jira comment, run /ultrareview. Phase 2 (subcommand 'review'): record review round, implement fixes, validate, commit, push. Delegated to by /dev for PR creation and review handling."
 allowed-tools: Bash Read Write
 ---
 
@@ -164,9 +164,9 @@ After creating the PR, run a multi-agent review in parallel:
 **Skip when**: the PR is trivial (one-line change, docs only, config with no logic).
 
 After ultrareview completes (or is skipped), offer proactively:
-> "PR listo para revisión humana. ¿Guardo un checkpoint? (`/reflect <TICKET_ID>`)"
+> "PR listo para revisión humana. ¿Guardo un checkpoint? (`/dev-reflect <TICKET_ID>`)"
 
-If the user confirms, run `/reflect <TICKET_ID>` immediately.
+If the user confirms, run `/dev-reflect <TICKET_ID>` immediately.
 
 ---
 
