@@ -22,11 +22,8 @@ REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
 REPO_NAME=$(basename "$REPO_ROOT")
 
 # Determine base branch and diff base
-if [ "$REPO_NAME" = "${SPECIAL_REPO}" ]; then
-  BASE_BRANCH="${SPECIAL_REPO_BASE}"
-else
-  BASE_BRANCH="master"
-fi
+BASE_BRANCH="master"
+case "$REPO_NAME" in ${SPECIAL_REPO_CASE_PATTERN}) BASE_BRANCH="${SPECIAL_REPO_BASE}";; esac
 
 # Determine PR title prefix from branch name
 CURRENT_BRANCH=$(git branch --show-current)

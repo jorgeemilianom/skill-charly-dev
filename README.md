@@ -109,6 +109,7 @@ Open Claude Code in your workspace and run:
 | Review a teammate's PR | `/dev review https://github.com/.../pull/42` |
 | Close the ticket | `/reflect PROJ-42 closing` |
 | See all active work | `/dev status` |
+| Pull a fresh prod DB snapshot | `/dev db-sync <project>` |
 
 ---
 
@@ -127,8 +128,9 @@ cp config.example.sh config.sh
 | `PROJECT_KEY_LOWER` | Same, lowercase (branch names) | `proj` |
 | `JIRA_BASE_URL` | Your Jira instance URL | `https://your-org.atlassian.net` |
 | `REPOS` | Repo directories, space-separated | `backend-api frontend-app` |
-| `SPECIAL_REPO` | Repo with a non-standard base branch | `frontend-app` |
-| `SPECIAL_REPO_BASE` | Its base branch | `develop` |
+| `SPECIAL_REPO_PATTERNS` | Repos (glob patterns) with a non-standard base branch | `frontend-app legacy-*` |
+| `SPECIAL_REPO_BASE` | Their base branch | `develop` |
+| `DB_SYNC_REPOS` | Repos supporting `/dev db-sync` (Phase 15) — leave empty to disable | `backend-api` |
 
 The skills also contain **architecture rules** and **keyword-to-repo mappings** tailored as examples — look for `> CUSTOMIZE` comments in `dev/SKILL.md` and `assess/SKILL.md` and replace them with your stack's conventions.
 
