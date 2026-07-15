@@ -76,8 +76,16 @@ If it's missing, or the user wants a refreshed list, or none of the cached epics
 rewrite the cache:
 ```bash
 JIRA_SKILL=${JIRA_SCRIPTS}
-uv run $JIRA_SKILL/core/jira-search.py query "project = ${PROJECT_KEY} AND issuetype = Epic ORDER BY created DESC" --json
+uv run $JIRA_SKILL/core/jira-search.py --json query "project = ${PROJECT_KEY} AND issuetype = Epic ORDER BY created DESC"
 ```
+
+> **Known issue** — as of the currently-installed `jira-communication` version, `jira-search.py query`
+> hits a retired Atlassian search endpoint and fails with "La API solicitada se ha eliminado. Migra a
+> la API /rest/api/3/search/jql." A newer skill version is available upstream
+> (`github.com/netresearch/jira-skill`, installed version was 3.13.1, newer tags exist up to 3.20.0+ at
+> time of writing) — update that skill first if this command fails. Until then, fall back to asking the
+> user for the epic key directly, or use `jira-issue.py get <EPIC_KEY> --json` to validate/name a
+> specific epic the user already knows.
 
 Cache format — `$WS/.ai-memory/epics.json`, keyed by project so multiple projects can share the file:
 ```json
@@ -97,17 +105,20 @@ confirmation before touching Jira.
 
 ## Step 5 — Create the ticket
 
-Dry-run first, show the output, then create for real only after confirmation:
+**Do not use `--parent <EPIC_KEY>` directly** — verified against `${PROJECT_KEY}` (team-managed
+project): `--parent` forces the issue type down to the project's subtask type regardless of `-t`,
+turning the new issue into a subtask of the epic instead of a top-level Story/Task/Bug linked to it.
+Use `--fields-json` instead, which preserves the requested type:
+
 ```bash
-uv run $JIRA_SKILL/workflow/jira-create.py issue ${PROJECT_KEY} "<summary>" -t <type> -d "<description>" --parent <EPIC_KEY> --dry-run
-uv run $JIRA_SKILL/workflow/jira-create.py issue ${PROJECT_KEY} "<summary>" -t <type> -d "<description>" --parent <EPIC_KEY>
+uv run $JIRA_SKILL/workflow/jira-create.py issue ${PROJECT_KEY} "<summary>" -t <type> -d "<description>" --fields-json '{"parent": {"key": "<EPIC_KEY>"}}' --dry-run
+uv run $JIRA_SKILL/workflow/jira-create.py issue ${PROJECT_KEY} "<summary>" -t <type> -d "<description>" --fields-json '{"parent": {"key": "<EPIC_KEY>"}}'
 ```
 
-> **Unverified assumption** — `jira-create.py --parent` is documented as creating a subtask, not
-> explicitly as an Epic Link. Before trusting this on a project's first real `dev-create` run, confirm
-> the dry-run output actually targets the Epic Link field for that Jira project's scheme (team-managed
-> vs company-managed projects use different fields). If it doesn't, use `--fields-json` with the
-> project's actual epic-link field instead. Remove this note once confirmed for `${PROJECT_KEY}`.
+If a future Jira project configured through this template is company-managed instead of team-managed,
+the epic-link field is different (classic "Epic Link" custom field, not `parent`) — check an existing
+epic-linked issue with `jira-issue.py get <KEY> --json` and look for either `fields.parent` or a
+`customfield_*` holding the epic key before assuming `parent` works there too.
 
 ## Step 6 — Report and offer to continue
 
