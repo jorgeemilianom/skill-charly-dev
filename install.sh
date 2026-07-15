@@ -130,6 +130,27 @@ if [[ -z "${JIRA_SCRIPTS:-}" ]]; then
   dim "JIRA_SCRIPTS not set in config.sh — defaulting to the vendored copy"
 fi
 
+# ── 3c. Local scripts toolbox ──────────────────
+# .ai/vendor/local/ is where the skills write their own project-specific scripts
+# over time (see dev/references/local-scripting.md) — never wiped on reinstall,
+# and gitignored since it's local-only, not something to publish upstream.
+LOCAL_VENDOR_DIR="$PROJECT_ROOT/.ai/vendor/local"
+mkdir -p "$LOCAL_VENDOR_DIR"
+MANIFEST="$LOCAL_VENDOR_DIR/MANIFEST.json"
+if [[ ! -f "$MANIFEST" ]]; then
+  printf '{\n  "scripts": []\n}\n' > "$MANIFEST"
+  info "Seeded .ai/vendor/local/MANIFEST.json"
+fi
+
+GITIGNORE="$PROJECT_ROOT/.gitignore"
+if [[ ! -f "$GITIGNORE" ]]; then
+  printf '.ai/vendor/local/\n' > "$GITIGNORE"
+  info "Created .gitignore with .ai/vendor/local/"
+elif ! grep -qxF '.ai/vendor/local/' "$GITIGNORE" 2>/dev/null; then
+  printf '\n.ai/vendor/local/\n' >> "$GITIGNORE"
+  info "Added .ai/vendor/local/ to existing .gitignore"
+fi
+
 # envsubst only replaces literal ${VAR} references — it doesn't evaluate bash
 # parameter expansions. Pre-compute the pipe-joined form here so templates can
 # drop it straight into a `case` pattern without needing SPECIAL_REPO_PATTERNS
@@ -181,6 +202,19 @@ for skill in "${SKILLS[@]}"; do
     printf '%s\n' "$generated" > "$dest"
     INSTALLED+=("$skill")
     info "Installed .ai/skills/$skill/SKILL.md"
+  fi
+
+  # Bundled resources: copy references/ (and substitute vars in its .md files) if the skill has one
+  if [[ -d "$REPO_DIR/$skill/references" ]]; then
+    mkdir -p "$dest_dir/references"
+    for ref in "$REPO_DIR/$skill/references"/*; do
+      ref_name="$(basename "$ref")"
+      if [[ "$ref_name" == *.md ]]; then
+        envsubst "$SUBST_VARS" < "$ref" > "$dest_dir/references/$ref_name"
+      else
+        cp "$ref" "$dest_dir/references/$ref_name"
+      fi
+    done
   fi
 
   # Claude Code discovery bridge: relative symlink, mirrors the ~/.agents/skills pattern

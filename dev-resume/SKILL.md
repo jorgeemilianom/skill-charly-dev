@@ -10,6 +10,8 @@ Resume development context for: **$ARGUMENTS**
 
 `$ARGUMENTS` is the ticket ID (`proj-XXX`).
 
+> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+
 ---
 
 ## Step 1 — Load ticket and branch state

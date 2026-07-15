@@ -12,6 +12,8 @@ Run DB sync for: **$ARGUMENTS**
 
 `<project>` must be one of: `${DB_SYNC_REPOS}`. If omitted, ask which project.
 
+> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+
 ---
 
 ## Step 0 — Load VPS config
