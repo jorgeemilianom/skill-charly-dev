@@ -72,6 +72,15 @@ that workflow with the user's arguments as `$ARGUMENTS`.
 `.ai/skills/dev/SKILL.md` is the orchestrator: when a request doesn't clearly match one of the other
 rows, start there — it routes to the rest via its own dispatch table.
 
+### Local scripts toolbox
+
+`.ai/vendor/local/` is a growing, gitignored, per-project toolbox the `/dev-*` skills write for
+themselves — small scripts that replace re-deriving the same multi-step procedure (and re-spending
+tokens on it) every session. Before improvising a multi-step shell/git/gh/jq procedure, read
+`.ai/vendor/local/MANIFEST.json` — a script may already exist for it. When you find yourself deriving a
+deterministic, repeatable procedure worth keeping, write it there and register it in the manifest. Full
+convention: `.ai/skills/dev/references/local-scripting.md`.
+
 ### Command Resolution Rules
 
 - Do not treat `/dev-*` as a literal Codex slash command. Resolve it as: read the matching

@@ -14,6 +14,8 @@ This skill performs the full pre-development analysis before any code is written
 
 **Triggered by**: before starting development. Can also be invoked directly.
 
+> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+
 ---
 
 ## Step 0 — Parallel kickoff

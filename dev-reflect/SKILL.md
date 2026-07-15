@@ -12,6 +12,8 @@ Extract ticket ID (`msof-XXX`) from `$ARGUMENTS`.
 
 Can be invoked at any moment during the ticket lifecycle. Does not require the ticket to be finished.
 
+> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+
 ## Codex execution contract
 
 This command is the canonical shared-memory writer for MSoftIA. Codex must treat it as an executable workflow, not as Claude-only documentation.

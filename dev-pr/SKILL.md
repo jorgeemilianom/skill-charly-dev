@@ -12,6 +12,8 @@ Extract ticket ID (`msof-XXX`) from `$ARGUMENTS`. Normalize to uppercase: `MSOF-
 
 Optional subcommand: `review` — skip directly to Phase 2 (handle existing review comments).
 
+> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+
 ---
 
 ## Repo and branch detection (run first, reuse throughout)

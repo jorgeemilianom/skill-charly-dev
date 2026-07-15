@@ -10,6 +10,8 @@ Run the migration workflow for: **$ARGUMENTS**
 
 `$ARGUMENTS` is the ticket ID (`msof-XXX`), used for the migration filename and commit message.
 
+> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+
 ---
 
 ## Step 1 — Check pending migrations

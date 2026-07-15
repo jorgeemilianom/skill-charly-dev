@@ -10,6 +10,8 @@ Turn this idea into a filed Jira ticket: **$ARGUMENTS**
 
 `$ARGUMENTS` is a freeform description — there is no ticket ID yet, that's what this skill produces.
 
+> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+
 ---
 
 ## Role

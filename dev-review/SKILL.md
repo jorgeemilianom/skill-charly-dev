@@ -10,6 +10,8 @@ Review the pull request at: **$ARGUMENTS**
 
 `$ARGUMENTS` is the PR URL (strip a leading `review ` if present).
 
+> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+
 ---
 
 ## Step 1 — Fetch PR context

@@ -10,6 +10,8 @@ Check status for: **$ARGUMENTS**
 
 If `$ARGUMENTS` contains a ticket ID (`msof-XXX`), run the single-ticket check below. If empty or just `status`, run the multi-ticket overview.
 
+> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+
 ---
 
 ## Single ticket: `<TICKET_ID> status`

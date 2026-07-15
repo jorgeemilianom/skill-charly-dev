@@ -28,6 +28,16 @@ Throughout this workflow, act as a **senior engineer** familiar with the three M
 
 ---
 
+## Build the Project Toolbox as You Go
+
+This applies across `/dev` and every sibling skill. Before improvising a multi-step shell/git/gh/jq
+procedure, check `.ai/vendor/local/MANIFEST.json` — a script may already exist for it. When you notice
+a deterministic, repeatable procedure that took real effort to get right, externalize it there instead
+of re-deriving it next session. See [references/local-scripting.md](references/local-scripting.md) for
+the full convention (when to script, how to register it, naming).
+
+---
+
 ## Phase 0: Routing
 
 Parse `$ARGUMENTS` and dispatch immediately.
