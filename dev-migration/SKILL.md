@@ -17,15 +17,15 @@ Run the migration workflow for: **$ARGUMENTS**
 ## Step 1 — Check pending migrations
 
 ```bash
-make -C QuintaApp-Api migrate-check 2>/dev/null || \
-  make -C QuintaApp-Api migrate-status 2>/dev/null
+make -C ${PROJECTS_PREFIX}QuintaApp-Api migrate-check 2>/dev/null || \
+  make -C ${PROJECTS_PREFIX}QuintaApp-Api migrate-status 2>/dev/null
 ```
 
 ## Step 2 — Create migration file (if adding a new one)
 
 ```bash
 # Asks for migration name interactively
-make -C QuintaApp-Api migrate-create
+make -C ${PROJECTS_PREFIX}QuintaApp-Api migrate-create
 ```
 Name format: `<short_description>_<TICKET_ID_LOWERCASE>` (e.g. `add_reviews_table_msof42`)
 
@@ -44,13 +44,13 @@ Write both up and down scripts in the generated files.
 > "Voy a correr `make migrate-up` en QuintaApp-Api. ¿Confirmás? (requiere DB_* env vars)"
 
 ```bash
-make -C QuintaApp-Api migrate-up
+make -C ${PROJECTS_PREFIX}QuintaApp-Api migrate-up
 ```
 
 ## Step 6 — Verify and commit
 
 ```bash
-make -C QuintaApp-Api test
-git add QuintaApp-Api/migrations/
+make -C ${PROJECTS_PREFIX}QuintaApp-Api test
+git add ${PROJECTS_PREFIX}QuintaApp-Api/migrations/
 git commit -m "<TICKET_ID> | add migration <migration_name>"
 ```

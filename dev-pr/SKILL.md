@@ -87,8 +87,8 @@ For each test file, note what scenario it covers (inferred from test function na
 
 If working in `QuintaApp-Api` and a spec file exists for the feature being implemented:
 ```bash
-ls QuintaApp-Api/specs/features/ 2>/dev/null
-cat QuintaApp-Api/specs/features/<feature-name>.md 2>/dev/null
+ls ${PROJECTS_PREFIX}QuintaApp-Api/specs/features/ 2>/dev/null
+cat ${PROJECTS_PREFIX}QuintaApp-Api/specs/features/<feature-name>.md 2>/dev/null
 ```
 Extract acceptance criteria from the spec if found.
 
@@ -107,7 +107,7 @@ Extract acceptance criteria from the spec if found.
 <omit this section entirely if no spec>
 
 ## Specs
-Specs disponibles en `QuintaApp-Api/specs/features/`
+Specs disponibles en `${PROJECTS_PREFIX}QuintaApp-Api/specs/features/`
 <only if a spec was found and used>
 ```
 
@@ -190,8 +190,8 @@ def workspace_root():
     return p if os.path.exists(os.path.join(p, 'CLAUDE.md')) else g
 
 WS = workspace_root()
-os.makedirs(f'{WS}/.ai-memory/review_rounds', exist_ok=True)
-path = f'{WS}/.ai-memory/review_rounds/<TICKET_ID>.json'
+os.makedirs(f'{WS}/.ai/memory/review_rounds', exist_ok=True)
+path = f'{WS}/.ai/memory/review_rounds/<TICKET_ID>.json'
 try:
     data = json.load(open(path))
 except Exception:
@@ -210,7 +210,7 @@ with open(path, 'w') as f:
 
 1. Analyze each comment and determine the fix.
 2. Implement all fixes.
-3. **If a spec exists in `QuintaApp-Api/specs/features/` and any fix alters a design decision** (not just a bug fix, but changes approach, interface, or behavior): update the relevant section of the spec before committing. Specs must describe what shipped, not the original plan.
+3. **If a spec exists in `${PROJECTS_PREFIX}QuintaApp-Api/specs/features/` and any fix alters a design decision** (not just a bug fix, but changes approach, interface, or behavior): update the relevant section of the spec before committing. Specs must describe what shipped, not the original plan.
 4. Run validation for the current repo:
 
    **QuintaApp-Api:**

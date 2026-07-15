@@ -20,7 +20,7 @@ This command is the canonical shared-memory writer for MSoftIA. Codex must treat
 
 - Normalize the ticket ID to uppercase for JSON contents and canonical filenames, e.g. `MSOF-321`.
 - When matching branches, also check lowercase forms, e.g. `msof-321`.
-- Local writes under `.ai-memory/` are allowed as part of this workflow and do not require separate user confirmation.
+- Local writes under `.ai/memory/` are allowed as part of this workflow and do not require separate user confirmation.
 - Jira transitions and Jira comments affect external state. In Codex, only run those steps when the user explicitly requested `closing`, asked to close the ticket, or otherwise authorized the closing flow.
 - If a command snippet is Claude-specific, adapt it to Codex:
   - `/rename` is a no-op.
@@ -33,7 +33,7 @@ This command is the canonical shared-memory writer for MSoftIA. Codex must treat
 
 ## Workspace root
 
-All `.ai-memory/` writes must go to the **workspace root** — the parent directory that contains all projects — not inside any individual git repo. Compute it once and reuse throughout:
+All `.ai/memory/` writes must go to the **workspace root** — the parent directory that contains all projects — not inside any individual git repo. Compute it once and reuse throughout:
 
 ```python
 import os, subprocess
@@ -49,7 +49,7 @@ def workspace_root():
 WS = workspace_root()
 ```
 
-In bash blocks, compute it inline before any `.ai-memory/` path:
+In bash blocks, compute it inline before any `.ai/memory/` path:
 
 ```bash
 WS=$(python3 -c "
@@ -119,7 +119,7 @@ def workspace_root():
     return parent if os.path.exists(os.path.join(parent, 'CLAUDE.md')) else git_root
 
 WS = workspace_root()
-os.makedirs(f'{WS}/.ai-memory/snapshots', exist_ok=True)
+os.makedirs(f'{WS}/.ai/memory/snapshots', exist_ok=True)
 
 snapshot = {
     'ticket_id': '<TICKET_ID>',
@@ -138,14 +138,14 @@ snapshot = {
         'pr_state': '<open|changes_requested|approved|merged|null>',
         'jira_url': '${JIRA_BASE_URL}/browse/<TICKET_ID>',
         'key_files': ['<files most central to the implementation>'],
-        'ai_memory': f'{WS}/.ai-memory/tickets/<TICKET_ID>.json'
+        'ai_memory': f'{WS}/.ai/memory/tickets/<TICKET_ID>.json'
     },
     'decisions': ['<each key technical decision made so far>'],
     'next_step': '<exact concrete action to take when resuming — one sentence>',
     'blockers': ['<anything blocking progress — empty list if none>']
 }
 
-path = f'{WS}/.ai-memory/snapshots/<TICKET_ID>.json'
+path = f'{WS}/.ai/memory/snapshots/<TICKET_ID>.json'
 with open(path, 'w') as f:
     json.dump(snapshot, f, indent=2)
 ```
@@ -171,7 +171,7 @@ def workspace_root():
     return parent if os.path.exists(os.path.join(parent, 'CLAUDE.md')) else git_root
 
 WS = workspace_root()
-profile_path = f'{WS}/.ai-memory/user_profile.json'
+profile_path = f'{WS}/.ai/memory/user_profile.json'
 
 try:
     with open(profile_path) as f:
@@ -292,7 +292,7 @@ p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
 
-jq empty $WS/.ai-memory/patterns.json 2>/dev/null || echo '{"patterns":[]}' > $WS/.ai-memory/patterns.json
+jq empty $WS/.ai/memory/patterns.json 2>/dev/null || echo '{"patterns":[]}' > $WS/.ai/memory/patterns.json
 
 jq --arg pattern "<detected pattern description>" \
    --arg type "error|success" '
@@ -304,7 +304,7 @@ jq --arg pattern "<detected pattern description>" \
   )
   else .patterns += [{"pattern": $pattern, "type": $type, "frequency": 1, "confidence": 0.5}]
   end
-' $WS/.ai-memory/patterns.json > $WS/.ai-memory/tmp.json && mv $WS/.ai-memory/tmp.json $WS/.ai-memory/patterns.json
+' $WS/.ai/memory/patterns.json > $WS/.ai/memory/tmp.json && mv $WS/.ai/memory/tmp.json $WS/.ai/memory/patterns.json
 ```
 
 Skip writing if no recurring pattern was detected.
@@ -332,7 +332,7 @@ p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
 
-jq empty $WS/.ai-memory/decisions.json 2>/dev/null || echo '{"decisions":[]}' > $WS/.ai-memory/decisions.json
+jq empty $WS/.ai/memory/decisions.json 2>/dev/null || echo '{"decisions":[]}' > $WS/.ai/memory/decisions.json
 
 jq --argjson entry '{
   "context": "<TICKET_ID>",
@@ -341,7 +341,7 @@ jq --argjson entry '{
   "score": 0.0,
   "timestamp": "<ISO 8601>"
 }' '.decisions += [$entry]' \
-$WS/.ai-memory/decisions.json > $WS/.ai-memory/tmp.json && mv $WS/.ai-memory/tmp.json $WS/.ai-memory/decisions.json
+$WS/.ai/memory/decisions.json > $WS/.ai/memory/tmp.json && mv $WS/.ai/memory/tmp.json $WS/.ai/memory/decisions.json
 ```
 
 ---
@@ -373,7 +373,7 @@ print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ### 7.1 — Save detected errors (only if found in Step 3b)
 
 ```bash
-jq empty $WS/.ai-memory/mistakes.json 2>/dev/null || echo '{"mistakes":[]}' > $WS/.ai-memory/mistakes.json
+jq empty $WS/.ai/memory/mistakes.json 2>/dev/null || echo '{"mistakes":[]}' > $WS/.ai/memory/mistakes.json
 
 jq --argjson entry '{
   "ticket": "<TICKET_ID>",
@@ -382,13 +382,13 @@ jq --argjson entry '{
 }' '
   if any(.mistakes[]; .ticket == $entry.ticket and .description == $entry.description)
   then . else .mistakes += [$entry] end
-' $WS/.ai-memory/mistakes.json > $WS/.ai-memory/tmp.json && mv $WS/.ai-memory/tmp.json $WS/.ai-memory/mistakes.json
+' $WS/.ai/memory/mistakes.json > $WS/.ai/memory/tmp.json && mv $WS/.ai/memory/tmp.json $WS/.ai/memory/mistakes.json
 ```
 
 ### 7.2 — Save new rules
 
 ```bash
-jq empty $WS/.ai-memory/global_rules.json 2>/dev/null || echo '{"rules":[]}' > $WS/.ai-memory/global_rules.json
+jq empty $WS/.ai/memory/global_rules.json 2>/dev/null || echo '{"rules":[]}' > $WS/.ai/memory/global_rules.json
 
 jq --argjson entry '{
   "rule": "<rule text>",
@@ -397,20 +397,20 @@ jq --argjson entry '{
 }' '
   if any(.rules[]; .rule == $entry.rule)
   then . else .rules += [$entry] end
-' $WS/.ai-memory/global_rules.json > $WS/.ai-memory/tmp.json && mv $WS/.ai-memory/tmp.json $WS/.ai-memory/global_rules.json
+' $WS/.ai/memory/global_rules.json > $WS/.ai/memory/tmp.json && mv $WS/.ai/memory/tmp.json $WS/.ai/memory/global_rules.json
 ```
 
 ### 7.3 — Save ticket learning
 
 ```bash
-mkdir -p $WS/.ai-memory/tickets
-jq empty $WS/.ai-memory/tickets/<TICKET_ID>.json 2>/dev/null || echo '{"summary":"","decisions":[],"learnings":[]}' > $WS/.ai-memory/tickets/<TICKET_ID>.json
+mkdir -p $WS/.ai/memory/tickets
+jq empty $WS/.ai/memory/tickets/<TICKET_ID>.json 2>/dev/null || echo '{"summary":"","decisions":[],"learnings":[]}' > $WS/.ai/memory/tickets/<TICKET_ID>.json
 
 jq --arg summary "<one-line summary of what was implemented>" \
    --arg learning "<concrete learning from this cycle>" '
   .summary = $summary |
   if any(.learnings[]; . == $learning) then . else .learnings += [$learning] end
-' $WS/.ai-memory/tickets/<TICKET_ID>.json > $WS/.ai-memory/tmp.json && mv $WS/.ai-memory/tmp.json $WS/.ai-memory/tickets/<TICKET_ID>.json
+' $WS/.ai/memory/tickets/<TICKET_ID>.json > $WS/.ai/memory/tmp.json && mv $WS/.ai/memory/tmp.json $WS/.ai/memory/tickets/<TICKET_ID>.json
 ```
 
 ### 7.4 — Save detected patterns
@@ -452,7 +452,7 @@ Load review rounds if they exist:
 import json, os
 
 WS = workspace_root()  # use the same function defined above
-rounds_path = f'{WS}/.ai-memory/review_rounds/<TICKET_ID>.json'
+rounds_path = f'{WS}/.ai/memory/review_rounds/<TICKET_ID>.json'
 try:
     rounds_data = json.load(open(rounds_path))
     total_rounds = len(rounds_data['rounds'])

@@ -26,24 +26,24 @@ embeds credentials, reference the helper path instead of duplicating the credent
 
 Shared memory for this workspace lives at:
 
-`.ai-memory/` (workspace root, next to `CLAUDE.md` — not per-repo)
+`.ai/memory/` (workspace root, next to `CLAUDE.md` — not per-repo)
 
 Files the `/dev-*` skills read and write:
 
-- `.ai-memory/user_profile.json` — communication/workflow preferences, loaded by `/dev` at the start of every ticket.
-- `.ai-memory/epics.json` — cached `${PROJECT_KEY}` epic list, maintained by `/dev-create` so epics aren't re-queried every session.
-- `.ai-memory/snapshots/<TICKET>.json` — checkpoints written by `/dev-reflect`, read by `/dev`, `/dev-resume`, `/dev-status`.
-- `.ai-memory/assessments/<TICKET>.json` — technical assessments written by `/dev-assess`.
-- `.ai-memory/vps-config.json` — production VPS connection settings for `/dev-db-sync`.
-- `.ai-memory/review_rounds/<TICKET>.json` — PR review history written by `/dev-pr`.
-- `.ai-memory/db-backups/` — downloaded DB snapshots from `/dev-db-sync`.
-- `.ai-memory/patterns.json`, `.ai-memory/decisions.json`, `.ai-memory/mistakes.json`, `.ai-memory/global_rules.json` — cross-ticket learnings written by `/dev-reflect`.
+- `.ai/memory/user_profile.json` — communication/workflow preferences, loaded by `/dev` at the start of every ticket.
+- `.ai/memory/epics.json` — cached `${PROJECT_KEY}` epic list, maintained by `/dev-create` so epics aren't re-queried every session.
+- `.ai/memory/snapshots/<TICKET>.json` — checkpoints written by `/dev-reflect`, read by `/dev`, `/dev-resume`, `/dev-status`.
+- `.ai/memory/assessments/<TICKET>.json` — technical assessments written by `/dev-assess`.
+- `.ai/memory/vps-config.json` — production VPS connection settings for `/dev-db-sync`.
+- `.ai/memory/review_rounds/<TICKET>.json` — PR review history written by `/dev-pr`.
+- `.ai/memory/db-backups/` — downloaded DB snapshots from `/dev-db-sync`.
+- `.ai/memory/patterns.json`, `.ai/memory/decisions.json`, `.ai/memory/mistakes.json`, `.ai/memory/global_rules.json` — cross-ticket learnings written by `/dev-reflect`.
 
-Memory writes are part of the shared workflow — both agents may update `.ai-memory/` files directly as
+Memory writes are part of the shared workflow — both agents may update `.ai/memory/` files directly as
 local memory persistence. Ask before Jira transitions or Jira comments unless the user explicitly
 requested the flow that includes them (e.g. `/dev-reflect` closing mode, `/dev-assess`).
 
-Imported Claude project memory index (legacy — prefer `.ai-memory/` for new learnings unless the user
+Imported Claude project memory index (legacy — prefer `.ai/memory/` for new learnings unless the user
 explicitly asks to update Claude memory):
 
 `${CLAUDE_MEMORY_INDEX}`
@@ -122,4 +122,4 @@ Jira base URL: `${JIRA_BASE_URL}`. Project key: `${PROJECT_KEY}`.
 ## Updating This Adapter
 
 If a future session discovers a new recurring rule that should affect both Claude and Codex, add it
-here. Ticket-specific details belong in `.ai-memory/tickets/` or `.ai-memory/snapshots/`, not here.
+here. Ticket-specific details belong in `.ai/memory/tickets/` or `.ai/memory/snapshots/`, not here.

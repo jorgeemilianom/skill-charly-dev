@@ -157,13 +157,19 @@ fi
 # to exist as a real env var at skill-execution time.
 export SPECIAL_REPO_CASE_PATTERN="${SPECIAL_REPO_PATTERNS// /|}"
 
+# Same idea: bake the trailing-slash-or-empty prefix once so templates can drop
+# it straight into a path (`$WS/${PROJECTS_PREFIX}QuintaApp-Api`) without needing
+# PROJECTS_SUBDIR to exist as a real env var at skill-execution time.
+export PROJECTS_PREFIX="${PROJECTS_SUBDIR:+$PROJECTS_SUBDIR/}"
+
 # Only these vars are substituted; all other \${...} in bash blocks are preserved.
-SUBST_VARS='${JIRA_SCRIPTS}${PROJECT_KEY}${PROJECT_KEY_LOWER}${JIRA_BASE_URL}${REPOS}${SPECIAL_REPO_PATTERNS}${SPECIAL_REPO_BASE}${SPECIAL_REPO_CASE_PATTERN}${DB_SYNC_REPOS}${CLAUDE_MEMORY_INDEX}'
+SUBST_VARS='${JIRA_SCRIPTS}${PROJECT_KEY}${PROJECT_KEY_LOWER}${JIRA_BASE_URL}${REPOS}${SPECIAL_REPO_PATTERNS}${SPECIAL_REPO_BASE}${SPECIAL_REPO_CASE_PATTERN}${DB_SYNC_REPOS}${CLAUDE_MEMORY_INDEX}${PROJECTS_PREFIX}'
 
 dim "JIRA_SCRIPTS          = ${JIRA_SCRIPTS:-<not set>}"
 dim "PROJECT_KEY           = ${PROJECT_KEY:-<not set>}"
 dim "JIRA_BASE_URL         = ${JIRA_BASE_URL:-<not set>}"
 dim "REPOS                 = ${REPOS:-<not set>}"
+dim "PROJECTS_SUBDIR       = ${PROJECTS_SUBDIR:-(none — repos at workspace root)}"
 dim "SPECIAL_REPO_PATTERNS = ${SPECIAL_REPO_PATTERNS:-(none)} → base: ${SPECIAL_REPO_BASE:-master}"
 dim "DB_SYNC_REPOS         = ${DB_SYNC_REPOS:-(none, db-sync disabled)}"
 dim "CLAUDE_MEMORY_INDEX   = ${CLAUDE_MEMORY_INDEX:-(none)}"

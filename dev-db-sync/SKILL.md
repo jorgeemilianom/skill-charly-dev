@@ -28,7 +28,7 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
-cat $WS/.ai-memory/vps-config.json 2>/dev/null
+cat $WS/.ai/memory/vps-config.json 2>/dev/null
 ```
 
 **If the file does not exist**, run the first-time setup below and save it before continuing.
@@ -49,7 +49,7 @@ Para cada proyecto en ${DB_SYNC_REPOS}:
   Comando make para importar el backup localmente (ej: db-import FILE=):
 ```
 
-Save to `$WS/.ai-memory/vps-config.json`, with one entry under `projects` per repo in `${DB_SYNC_REPOS}`:
+Save to `$WS/.ai/memory/vps-config.json`, with one entry under `projects` per repo in `${DB_SYNC_REPOS}`:
 ```json
 {
   "production_vps": {
@@ -91,17 +91,17 @@ If the command fails, show stderr and abort.
 
 ## Step 3 — Download the backup to this VPS
 
-Local destination: `$WS/.ai-memory/db-backups/<project>_<YYYY-MM-DD_HH-MM-SS>.sql`
+Local destination: `$WS/.ai/memory/db-backups/<project>_<YYYY-MM-DD_HH-MM-SS>.sql`
 
 ```bash
-mkdir -p $WS/.ai-memory/db-backups
+mkdir -p $WS/.ai/memory/db-backups
 scp -i <key_path> <user>@<host>:<remote_backup_file> \
-    "$WS/.ai-memory/db-backups/<project>_$(date +%Y-%m-%d_%H-%M-%S).sql"
+    "$WS/.ai/memory/db-backups/<project>_$(date +%Y-%m-%d_%H-%M-%S).sql"
 ```
 
 Confirm success by checking the downloaded file size:
 ```bash
-ls -lh "$WS/.ai-memory/db-backups/<project>_<timestamp>.sql"
+ls -lh "$WS/.ai/memory/db-backups/<project>_<timestamp>.sql"
 ```
 
 If file is 0 bytes or missing, abort with an error.
@@ -113,7 +113,7 @@ Ask:
 
 If confirmed:
 ```bash
-make -C $WS/<project> <local_import_make_target>"$WS/.ai-memory/db-backups/<downloaded_file>"
+make -C $WS/<project> <local_import_make_target>"$WS/.ai/memory/db-backups/<downloaded_file>"
 ```
 
 If the Makefile target does not exist, warn and suggest the user run the import manually, showing the exact file path.

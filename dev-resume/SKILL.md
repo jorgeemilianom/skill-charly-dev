@@ -30,16 +30,16 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
-cat $WS/.ai-memory/snapshots/<TICKET_ID>.json 2>/dev/null
-cat $WS/.ai-memory/assessments/<TICKET_ID>.json 2>/dev/null
+cat $WS/.ai/memory/snapshots/<TICKET_ID>.json 2>/dev/null
+cat $WS/.ai/memory/assessments/<TICKET_ID>.json 2>/dev/null
 
 for REPO in ${REPOS}; do
   BASE="master"; case "$REPO" in ${SPECIAL_REPO_CASE_PATTERN}) BASE="${SPECIAL_REPO_BASE}";; esac
-  BRANCH=$(git -C $WS/$REPO branch -a | grep -i "<TICKET_ID>" | head -1 | tr -d ' ')
+  BRANCH=$(git -C $WS/${PROJECTS_PREFIX}$REPO branch -a | grep -i "<TICKET_ID>" | head -1 | tr -d ' ')
   if [ -n "$BRANCH" ]; then
     echo "=== $REPO ==="
-    git -C $WS/$REPO log $BASE..HEAD --oneline
-    git -C $WS/$REPO status --short
+    git -C $WS/${PROJECTS_PREFIX}$REPO log $BASE..HEAD --oneline
+    git -C $WS/${PROJECTS_PREFIX}$REPO status --short
     gh pr list --head $(echo $BRANCH | sed 's|remotes/origin/||') \
       --json number,title,state,url,reviews,reviewRequests,comments 2>/dev/null
   fi

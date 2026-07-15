@@ -26,13 +26,13 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
-cat $WS/.ai-memory/snapshots/<TICKET_ID>.json 2>/dev/null
+cat $WS/.ai/memory/snapshots/<TICKET_ID>.json 2>/dev/null
 
 for REPO in ${REPOS}; do
   BASE="master"; case "$REPO" in ${SPECIAL_REPO_CASE_PATTERN}) BASE="${SPECIAL_REPO_BASE}";; esac
-  git -C $WS/$REPO fetch origin -q 2>/dev/null
-  BRANCH=$(git -C $WS/$REPO branch -a | grep -i "<TICKET_ID>" | head -1 | xargs)
-  [ -n "$BRANCH" ] && echo "$REPO: $BRANCH" && git -C $WS/$REPO log $BASE..HEAD --oneline 2>/dev/null | head -3
+  git -C $WS/${PROJECTS_PREFIX}$REPO fetch origin -q 2>/dev/null
+  BRANCH=$(git -C $WS/${PROJECTS_PREFIX}$REPO branch -a | grep -i "<TICKET_ID>" | head -1 | xargs)
+  [ -n "$BRANCH" ] && echo "$REPO: $BRANCH" && git -C $WS/${PROJECTS_PREFIX}$REPO log $BASE..HEAD --oneline 2>/dev/null | head -3
 done
 
 gh pr list --search "<TICKET_ID>" --json state,url,title --state all 2>/dev/null | head -3
@@ -63,7 +63,7 @@ print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
 
 for REPO in ${REPOS}; do
-  git -C $WS/$REPO branch -a 2>/dev/null | grep -oiE "(feature|fix)/${PROJECT_KEY_LOWER}-[0-9]+" | sort -u
+  git -C $WS/${PROJECTS_PREFIX}$REPO branch -a 2>/dev/null | grep -oiE "(feature|fix)/${PROJECT_KEY_LOWER}-[0-9]+" | sort -u
 done | sort -u
 ```
 

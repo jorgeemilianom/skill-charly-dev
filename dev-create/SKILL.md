@@ -69,7 +69,7 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
-cat $WS/.ai-memory/epics.json 2>/dev/null
+cat $WS/.ai/memory/epics.json 2>/dev/null
 ```
 
 If it exists, show the cached `${PROJECT_KEY}` epics and ask the user to pick one (or "ninguna").
@@ -81,7 +81,7 @@ JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/core/jira-search.py --json query "project = ${PROJECT_KEY} AND issuetype = Epic ORDER BY created DESC"
 ```
 
-Cache format — `$WS/.ai-memory/epics.json`, keyed by project so multiple projects can share the file:
+Cache format — `$WS/.ai/memory/epics.json`, keyed by project so multiple projects can share the file:
 ```json
 {
   "${PROJECT_KEY}": {
