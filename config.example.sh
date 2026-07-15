@@ -24,6 +24,11 @@ export JIRA_BASE_URL="https://your-org.atlassian.net"
 # (first = most foundational / backend, last = most independent)
 export REPOS="backend-api frontend-app"
 
+# Subfolder (relative to the workspace root) that repos live under, e.g. "projects"
+# if you clone repos into <workspace>/projects/<repo> instead of <workspace>/<repo>
+# directly. Leave empty for the flat layout (repos as direct children of the root).
+export PROJECTS_SUBDIR=""
+
 # If some repos use a non-standard base branch (e.g. "develop" instead of "master"),
 # list them here as space-separated glob patterns (exact names or trailing "*").
 # Leave empty if all repos use "master".

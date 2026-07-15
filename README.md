@@ -27,7 +27,7 @@ you                    agent
 /dev PROJ-42
                        reads ticket from Jira
                        explores codebase (grep, git log, file reads)
-                       loads past decisions from .ai-memory/
+                       loads past decisions from .ai/memory/
                        ─────────────────────────────
                        Technical Assessment
                          · approach proposed
@@ -59,12 +59,12 @@ review comments arrive
 PR merged
 
 /dev-reflect PROJ-42 closing
-                       saves learnings to .ai-memory/
+                       saves learnings to .ai/memory/
                        transitions Jira to Done
                        posts closing comment
 ```
 
-The longer you use it, the better it gets — `.ai-memory/` accumulates your project's decisions, recurring mistakes, and patterns across tickets.
+The longer you use it, the better it gets — `.ai/memory/` accumulates your project's decisions, recurring mistakes, and patterns across tickets.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: dev-assess
-description: "Technical deep dive before writing any code. Reads Jira, detects affected repos, explores the codebase with architecture-aware heuristics, loads .ai-memory context, produces a Technical Assessment, and — after one user confirmation — enriches the Jira ticket with structured documentation and transitions it to In Progress. Delegated to by /dev before development starts."
+description: "Technical deep dive before writing any code. Reads Jira, detects affected repos, explores the codebase with architecture-aware heuristics, loads .ai/memory context, produces a Technical Assessment, and — after one user confirmation — enriches the Jira ticket with structured documentation and transitions it to In Progress. Delegated to by /dev before development starts."
 allowed-tools: Bash Read Write
 ---
 
@@ -39,22 +39,22 @@ uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
 
 # 2 — Check branch state across all sub-repos
 for REPO in ${REPOS}; do
-  git -C $WS/$REPO fetch origin 2>/dev/null; git -C $WS/$REPO branch -a | grep -i "<TICKET_ID>"
+  git -C $WS/${PROJECTS_PREFIX}$REPO fetch origin 2>/dev/null; git -C $WS/${PROJECTS_PREFIX}$REPO branch -a | grep -i "<TICKET_ID>"
 done
 
-# 3 — Initialize and read .ai-memory/
-mkdir -p $WS/.ai-memory/tickets $WS/.ai-memory/assessments
-[ -f $WS/.ai-memory/global_rules.json ] || echo '{"rules":[]}' > $WS/.ai-memory/global_rules.json
-[ -f $WS/.ai-memory/patterns.json ]     || echo '{"patterns":[]}' > $WS/.ai-memory/patterns.json
-jq empty $WS/.ai-memory/patterns.json 2>/dev/null || echo '{"patterns":[]}' > $WS/.ai-memory/patterns.json
+# 3 — Initialize and read .ai/memory/
+mkdir -p $WS/.ai/memory/tickets $WS/.ai/memory/assessments
+[ -f $WS/.ai/memory/global_rules.json ] || echo '{"rules":[]}' > $WS/.ai/memory/global_rules.json
+[ -f $WS/.ai/memory/patterns.json ]     || echo '{"patterns":[]}' > $WS/.ai/memory/patterns.json
+jq empty $WS/.ai/memory/patterns.json 2>/dev/null || echo '{"patterns":[]}' > $WS/.ai/memory/patterns.json
 jq '.patterns |= map(. + {type: (.type // "success"), frequency: (.frequency // 1), confidence: (.confidence // 0.5)})' \
-  $WS/.ai-memory/patterns.json > $WS/.ai-memory/tmp.json && mv $WS/.ai-memory/tmp.json $WS/.ai-memory/patterns.json
-[ -f $WS/.ai-memory/decisions.json ] || echo '{"decisions":[]}' > $WS/.ai-memory/decisions.json
-[ -f $WS/.ai-memory/mistakes.json ]  || echo '{"mistakes":[]}' > $WS/.ai-memory/mistakes.json
-[ -f $WS/.ai-memory/tickets/<TICKET_ID>.json ] || echo '{"summary":"","decisions":[],"learnings":[]}' > $WS/.ai-memory/tickets/<TICKET_ID>.json
-[ -f $WS/.ai-memory/assessments/<TICKET_ID>.json ] && cat $WS/.ai-memory/assessments/<TICKET_ID>.json
-cat $WS/.ai-memory/global_rules.json $WS/.ai-memory/patterns.json $WS/.ai-memory/decisions.json \
-    $WS/.ai-memory/mistakes.json $WS/.ai-memory/tickets/<TICKET_ID>.json
+  $WS/.ai/memory/patterns.json > $WS/.ai/memory/tmp.json && mv $WS/.ai/memory/tmp.json $WS/.ai/memory/patterns.json
+[ -f $WS/.ai/memory/decisions.json ] || echo '{"decisions":[]}' > $WS/.ai/memory/decisions.json
+[ -f $WS/.ai/memory/mistakes.json ]  || echo '{"mistakes":[]}' > $WS/.ai/memory/mistakes.json
+[ -f $WS/.ai/memory/tickets/<TICKET_ID>.json ] || echo '{"summary":"","decisions":[],"learnings":[]}' > $WS/.ai/memory/tickets/<TICKET_ID>.json
+[ -f $WS/.ai/memory/assessments/<TICKET_ID>.json ] && cat $WS/.ai/memory/assessments/<TICKET_ID>.json
+cat $WS/.ai/memory/global_rules.json $WS/.ai/memory/patterns.json $WS/.ai/memory/decisions.json \
+    $WS/.ai/memory/mistakes.json $WS/.ai/memory/tickets/<TICKET_ID>.json
 
 # 4 — Extract epic key from ticket JSON (run in parallel)
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json 2>/dev/null | python3 -c "
@@ -73,9 +73,9 @@ Once all complete, determine:
 
 ## Section E — Historical Context (passive, from Step 0)
 
-Extract from `.ai-memory/` files loaded in Step 0:
+Extract from `.ai/memory/` files loaded in Step 0:
 
-1. **`.ai-memory/`** (primary): decisions, mistakes, patterns, global rules, ticket history.
+1. **`.ai/memory/`** (primary): decisions, mistakes, patterns, global rules, ticket history.
 2. **`~/.claude/projects/`** (secondary): style preferences and authorization rules.
 
 Feed findings into the **Memory context** section of the Technical Assessment. Cite origin ticket when relevant: `"En PROJ-XXX se adoptó el mismo patrón y funcionó / falló porque [razón]"`. If nothing is applicable, continue silently.
@@ -126,16 +126,16 @@ If ambiguous or the ticket mentions multiple areas → mark all relevant repos a
 **For backend-api** (if affected):
 ```bash
 WS=<workspace_root>
-cat $WS/backend-api/CLAUDE.md
-cat $WS/backend-api/Makefile
-ls $WS/backend-api/internal/core/domain/
-ls $WS/backend-api/internal/core/ports/repositories/
-ls $WS/backend-api/internal/core/ports/services/
-ls $WS/backend-api/internal/core/services/
-ls $WS/backend-api/internal/adapters/primary/http/handlers/
-ls $WS/backend-api/internal/adapters/secondary/mysql/
-ls $WS/backend-api/specs/features/ 2>/dev/null
-cat $WS/backend-api/spec_openapi/openapi.yaml 2>/dev/null | head -80
+cat $WS/${PROJECTS_PREFIX}backend-api/CLAUDE.md
+cat $WS/${PROJECTS_PREFIX}backend-api/Makefile
+ls $WS/${PROJECTS_PREFIX}backend-api/internal/core/domain/
+ls $WS/${PROJECTS_PREFIX}backend-api/internal/core/ports/repositories/
+ls $WS/${PROJECTS_PREFIX}backend-api/internal/core/ports/services/
+ls $WS/${PROJECTS_PREFIX}backend-api/internal/core/services/
+ls $WS/${PROJECTS_PREFIX}backend-api/internal/adapters/primary/http/handlers/
+ls $WS/${PROJECTS_PREFIX}backend-api/internal/adapters/secondary/mysql/
+ls $WS/${PROJECTS_PREFIX}backend-api/specs/features/ 2>/dev/null
+cat $WS/${PROJECTS_PREFIX}backend-api/spec_openapi/openapi.yaml 2>/dev/null | head -80
 ```
 Architecture layers (dependencies flow inward): Adapters → Ports → Domain.
 Coverage gate: 80% minimum on `./internal/core/...` and `./internal/adapters/primary/...`.
@@ -143,22 +143,22 @@ New domain errors: define in `errors.go`, add case in `mapError()`.
 
 **For frontend-app** (if affected):
 ```bash
-cat $WS/frontend-app/CLAUDE.md
-ls $WS/frontend-app/src/features/
-ls $WS/frontend-app/src/services/
-ls $WS/frontend-app/src/components/
-ls $WS/frontend-app/src/pages/ 2>/dev/null
+cat $WS/${PROJECTS_PREFIX}frontend-app/CLAUDE.md
+ls $WS/${PROJECTS_PREFIX}frontend-app/src/features/
+ls $WS/${PROJECTS_PREFIX}frontend-app/src/services/
+ls $WS/${PROJECTS_PREFIX}frontend-app/src/components/
+ls $WS/${PROJECTS_PREFIX}frontend-app/src/pages/ 2>/dev/null
 ```
 All API calls go through `src/services/apiClient.js` — never fetch directly from components.
 Every new component needs a `.test.jsx` file alongside it.
 
 **For internal-platform** (if affected):
 ```bash
-cat $WS/internal-platform/CLAUDE.md
-cat $WS/internal-platform/Makefile
-ls $WS/internal-platform/src/ 2>/dev/null
-ls $WS/internal-platform/api/ 2>/dev/null
-ls $WS/internal-platform/admin/src/ 2>/dev/null
+cat $WS/${PROJECTS_PREFIX}internal-platform/CLAUDE.md
+cat $WS/${PROJECTS_PREFIX}internal-platform/Makefile
+ls $WS/${PROJECTS_PREFIX}internal-platform/src/ 2>/dev/null
+ls $WS/${PROJECTS_PREFIX}internal-platform/api/ 2>/dev/null
+ls $WS/${PROJECTS_PREFIX}internal-platform/admin/src/ 2>/dev/null
 ```
 Critical rules: always scope SQL with `business_id`; never use PUT/DELETE; always run `make build` after Backoffice changes; branch flow is `feature/*` → `develop` → `master` (never push direct to master).
 
@@ -172,31 +172,31 @@ For each affected repo, run grep and git log in parallel. Use keywords from the 
 
 **backend-api:**
 ```bash
-grep -r "<keyword>" $WS/backend-api/internal/ --include="*.go" -l
-git -C $WS/backend-api log --oneline --all --grep="<keyword>"
+grep -r "<keyword>" $WS/${PROJECTS_PREFIX}backend-api/internal/ --include="*.go" -l
+git -C $WS/${PROJECTS_PREFIX}backend-api log --oneline --all --grep="<keyword>"
 ```
 Then read: handler → use case interface (port) → service implementation → repository interface → MySQL implementation → tests.
 
 **frontend-app:**
 ```bash
-grep -r "<keyword>" $WS/frontend-app/src/ --include="*.jsx" --include="*.js" -l
-git -C $WS/frontend-app log --oneline --all --grep="<keyword>"
+grep -r "<keyword>" $WS/${PROJECTS_PREFIX}frontend-app/src/ --include="*.jsx" --include="*.js" -l
+git -C $WS/${PROJECTS_PREFIX}frontend-app log --oneline --all --grep="<keyword>"
 ```
 Then read: feature component → hook → service call in apiClient.
 
 **internal-platform:**
 ```bash
-grep -r "<keyword>" $WS/internal-platform/src/ --include="*.php" -l
-grep -r "<keyword>" $WS/internal-platform/admin/src/ --include="*.jsx" --include="*.astro" -l 2>/dev/null
-git -C $WS/internal-platform log --oneline --all --grep="<keyword>"
+grep -r "<keyword>" $WS/${PROJECTS_PREFIX}internal-platform/src/ --include="*.php" -l
+grep -r "<keyword>" $WS/${PROJECTS_PREFIX}internal-platform/admin/src/ --include="*.jsx" --include="*.astro" -l 2>/dev/null
+git -C $WS/${PROJECTS_PREFIX}internal-platform log --oneline --all --grep="<keyword>"
 ```
 Always check `business_id` scope when reading any DB query. Flag if missing.
 
 **Cross-project check** (always):
 ```bash
 # If Api endpoint changes → check Frontend calls the same path
-grep -r "<endpoint_path>" $WS/frontend-app/src/services/ 2>/dev/null
-grep -r "<endpoint_path>" $WS/internal-platform/ 2>/dev/null
+grep -r "<endpoint_path>" $WS/${PROJECTS_PREFIX}frontend-app/src/services/ 2>/dev/null
+grep -r "<endpoint_path>" $WS/${PROJECTS_PREFIX}internal-platform/ 2>/dev/null
 ```
 
 Surface cross-project impact if found.
@@ -376,7 +376,7 @@ For branches with existing commits, skip sections E–B and present a concise re
 
 - Is the current implementation still the right approach?
 - Any new concerns from reading existing code?
-- Check if a saved assessment exists in `.ai-memory/assessments/<TICKET_ID>.json` and use it as base.
+- Check if a saved assessment exists in `.ai/memory/assessments/<TICKET_ID>.json` and use it as base.
 - Present condensed assessment and wait for confirmation.
 
 If Jira documentation was never generated for this ticket (no `assessed` label), offer to generate it now.
@@ -413,7 +413,7 @@ def workspace_root():
     return p if os.path.exists(os.path.join(p, 'CLAUDE.md')) else g
 
 WS = workspace_root()
-os.makedirs(f'{WS}/.ai-memory/assessments', exist_ok=True)
+os.makedirs(f'{WS}/.ai/memory/assessments', exist_ok=True)
 
 assessment = {
     'ticket_id': '<TICKET_ID>',
@@ -433,7 +433,7 @@ assessment = {
     'memory_context_used': '<patterns/mistakes that influenced approach — brief or null>'
 }
 
-with open(f'{WS}/.ai-memory/assessments/<TICKET_ID>.json', 'w') as f:
+with open(f'{WS}/.ai/memory/assessments/<TICKET_ID>.json', 'w') as f:
     json.dump(assessment, f, indent=2)
 ```
 

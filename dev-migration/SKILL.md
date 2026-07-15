@@ -17,15 +17,15 @@ Run the migration workflow for: **$ARGUMENTS**
 ## Step 1 — Check pending migrations
 
 ```bash
-make -C backend-api migrate-check 2>/dev/null || \
-  make -C backend-api migrate-status 2>/dev/null
+make -C ${PROJECTS_PREFIX}backend-api migrate-check 2>/dev/null || \
+  make -C ${PROJECTS_PREFIX}backend-api migrate-status 2>/dev/null
 ```
 
 ## Step 2 — Create migration file (if adding a new one)
 
 ```bash
 # Asks for migration name interactively
-make -C backend-api migrate-create
+make -C ${PROJECTS_PREFIX}backend-api migrate-create
 ```
 Name format: `<short_description>_<TICKET_ID_LOWERCASE>` (e.g. `add_reviews_table_proj42`)
 
@@ -44,13 +44,13 @@ Write both up and down scripts in the generated files.
 > "Voy a correr `make migrate-up` en backend-api. ¿Confirmás? (requiere DB_* env vars)"
 
 ```bash
-make -C backend-api migrate-up
+make -C ${PROJECTS_PREFIX}backend-api migrate-up
 ```
 
 ## Step 6 — Verify and commit
 
 ```bash
-make -C backend-api test
-git add backend-api/migrations/
+make -C ${PROJECTS_PREFIX}backend-api test
+git add ${PROJECTS_PREFIX}backend-api/migrations/
 git commit -m "<TICKET_ID> | add migration <migration_name>"
 ```
