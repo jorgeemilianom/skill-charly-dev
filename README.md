@@ -166,7 +166,7 @@ cp config.example.sh config.sh
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `JIRA_SCRIPTS` | Path to your Jira scripts | `/path/to/jira-communication/scripts` |
+| `JIRA_SCRIPTS` | Path to Jira CLI scripts. Leave empty to use the copy vendored in this repo | `/path/to/your-own/jira-communication/scripts` |
 | `PROJECT_KEY` | Jira project key (uppercase) | `PROJ` |
 | `PROJECT_KEY_LOWER` | Same, lowercase (branch names) | `proj` |
 | `JIRA_BASE_URL` | Your Jira instance URL | `https://your-org.atlassian.net` |

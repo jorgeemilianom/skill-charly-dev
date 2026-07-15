@@ -79,14 +79,6 @@ JIRA_SKILL=${JIRA_SCRIPTS}
 uv run $JIRA_SKILL/core/jira-search.py --json query "project = ${PROJECT_KEY} AND issuetype = Epic ORDER BY created DESC"
 ```
 
-> **Known issue** — as of the currently-installed `jira-communication` version, `jira-search.py query`
-> hits a retired Atlassian search endpoint and fails with "La API solicitada se ha eliminado. Migra a
-> la API /rest/api/3/search/jql." A newer skill version is available upstream
-> (`github.com/netresearch/jira-skill`, installed version was 3.13.1, newer tags exist up to 3.20.0+ at
-> time of writing) — update that skill first if this command fails. Until then, fall back to asking the
-> user for the epic key directly, or use `jira-issue.py get <EPIC_KEY> --json` to validate/name a
-> specific epic the user already knows.
-
 Cache format — `$WS/.ai-memory/epics.json`, keyed by project so multiple projects can share the file:
 ```json
 {
