@@ -109,12 +109,12 @@ fi
 # ── 3b. Vendor third-party scripts ────────────
 # The skills call out to the jira-communication CLI scripts. Rather than require
 # a separately-installed skill on every machine, a copy ships in this repo
-# (vendor/jira-communication/ — see its NOTICE.md for source/license) and gets
+# (scripts/jira-communication/ — see its NOTICE.md for source/license) and gets
 # copied into the project on install. JIRA_SCRIPTS in config.sh, if set,
 # overrides this with your own installation instead.
 heading "Vendoring third-party scripts..."
 
-VENDOR_SRC="$REPO_DIR/vendor/jira-communication"
+VENDOR_SRC="$REPO_DIR/scripts/jira-communication"
 VENDOR_DEST="$PROJECT_ROOT/.ai/vendor/jira-communication"
 if [[ -d "$VENDOR_SRC" ]]; then
   mkdir -p "$(dirname "$VENDOR_DEST")"
@@ -184,7 +184,7 @@ UPDATED=()
 SKIPPED=()
 
 for skill in "${SKILLS[@]}"; do
-  template="$REPO_DIR/$skill/SKILL.md"
+  template="$REPO_DIR/skills/$skill/SKILL.md"
   dest_dir="$SKILLS_OUT/$skill"
   dest="$dest_dir/SKILL.md"
 
@@ -211,9 +211,9 @@ for skill in "${SKILLS[@]}"; do
   fi
 
   # Bundled resources: copy references/ (and substitute vars in its .md files) if the skill has one
-  if [[ -d "$REPO_DIR/$skill/references" ]]; then
+  if [[ -d "$REPO_DIR/skills/$skill/references" ]]; then
     mkdir -p "$dest_dir/references"
-    for ref in "$REPO_DIR/$skill/references"/*; do
+    for ref in "$REPO_DIR/skills/$skill/references"/*; do
       ref_name="$(basename "$ref")"
       if [[ "$ref_name" == *.md ]]; then
         envsubst "$SUBST_VARS" < "$ref" > "$dest_dir/references/$ref_name"
@@ -240,7 +240,7 @@ done
 heading "Installing shared adapter..."
 
 AGENT_CONTEXT_DEST="$PROJECT_ROOT/.ai/agent-context.md"
-generated_ctx=$(envsubst "$SUBST_VARS" < "$REPO_DIR/agent-context.md.template")
+generated_ctx=$(envsubst "$SUBST_VARS" < "$REPO_DIR/templates/agent-context.md.template")
 if [[ -f "$AGENT_CONTEXT_DEST" ]] && [[ "$generated_ctx" == "$(cat "$AGENT_CONTEXT_DEST")" ]]; then
   info "Up to date .ai/agent-context.md"
 else
@@ -249,13 +249,13 @@ else
 fi
 
 AGENTS_MD_DEST="$PROJECT_ROOT/AGENTS.md"
-generated_agents=$(envsubst "$SUBST_VARS" < "$REPO_DIR/AGENTS.md.template")
+generated_agents=$(envsubst "$SUBST_VARS" < "$REPO_DIR/templates/AGENTS.md.template")
 if [[ -f "$AGENTS_MD_DEST" ]]; then
   if [[ "$generated_agents" == "$(cat "$AGENTS_MD_DEST")" ]]; then
     info "Up to date AGENTS.md"
   else
     warn "AGENTS.md already exists at $AGENTS_MD_DEST with different content — not overwriting."
-    warn "Compare manually against the template: $REPO_DIR/AGENTS.md.template"
+    warn "Compare manually against the template: $REPO_DIR/templates/AGENTS.md.template"
   fi
 else
   printf '%s\n' "$generated_agents" > "$AGENTS_MD_DEST"
