@@ -38,6 +38,8 @@ for REPO in $REPOS; do
 done
 
 gh pr list --search "<TICKET_ID>" --json state,url,title --state all 2>/dev/null | head -3
+
+[ -f $WS/memory/tickets/<TICKET_ID>.json ] && echo "reflected: yes" || echo "reflected: no"
 ```
 
 Output format — exactly 6 lines, no markdown:
@@ -48,6 +50,11 @@ Commits: <N commits total>  |  Cambios sin commitear: <yes/no>
 Próximo paso: <next_step from snapshot or inferred>
 Última actualización: <snapshot_date or "sin snapshot">
 ```
+
+**Próximo paso priority rule**: if `Estado PR` is `merged` and `reflected: no`, the next step is always
+`cerrar con /dev-reflect <TICKET_ID> closing` — capturing the closing reflection (learnings, mistakes,
+patterns) takes priority over branch cleanup, since cleanup can happen as part of that closing flow.
+Only fall back to "limpiar branch local" once `reflected: yes`.
 
 ---
 
@@ -71,9 +78,19 @@ for REPO in $REPOS; do
 done | sort -u
 ```
 
-For each ticket found, collect in parallel and output one line:
+For each ticket found, check whether it was ever closed out:
+```bash
+[ -f $WS/memory/tickets/<TICKET_ID>.json ] && echo "reflected: yes" || echo "reflected: no"
+```
+
+Collect the rest (PR state, commit count) in parallel and output one line per ticket:
 ```
 MSOF-XXX  <phase>  |  <N> commits  |  PR: <state or "sin PR">  |  <next_step — 5 words max>
 ```
+
+**Próximo paso priority rule** (same as the single-ticket check): if the PR is merged and
+`reflected: no`, `<next_step>` is `cerrar con /dev-reflect closing` — this takes priority over
+"limpiar branch local". Sort merged-and-unreflected tickets to the **top** of the list — they're the
+ones losing captured learnings the longer they sit, not just stale branches.
 
 If no active branches: `"No hay branches activos de MSOF en este workspace."`
