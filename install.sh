@@ -146,7 +146,7 @@ GITIGNORE="$PROJECT_ROOT/.gitignore"
 if [[ ! -f "$GITIGNORE" ]]; then
   printf '.ai/vendor/local/\n' > "$GITIGNORE"
   info "Created .gitignore with .ai/vendor/local/"
-elif ! grep -qxF '.ai/vendor/local/' "$GITIGNORE" 2>/dev/null; then
+elif ! grep -qxF '.ai/vendor/local/' "$GITIGNORE" 2>/dev/null && ! grep -qxF '.ai/' "$GITIGNORE" 2>/dev/null; then
   printf '\n.ai/vendor/local/\n' >> "$GITIGNORE"
   info "Added .ai/vendor/local/ to existing .gitignore"
 fi
@@ -161,6 +161,13 @@ export SPECIAL_REPO_CASE_PATTERN="${SPECIAL_REPO_PATTERNS// /|}"
 # it straight into a path (`$WS/${PROJECTS_PREFIX}QuintaApp-Api`) without needing
 # PROJECTS_SUBDIR to exist as a real env var at skill-execution time.
 export PROJECTS_PREFIX="${PROJECTS_SUBDIR:+$PROJECTS_SUBDIR/}"
+
+# Scaffold the projects checkout folder so a fresh clone + install is immediately
+# ready to receive `git clone` of the repos in scope — nothing to create by hand.
+if [[ -n "${PROJECTS_SUBDIR:-}" ]]; then
+  mkdir -p "$PROJECT_ROOT/$PROJECTS_SUBDIR"
+  dim "Ensured $PROJECTS_SUBDIR/ exists for project checkouts"
+fi
 
 # Only these vars are substituted; all other \${...} in bash blocks are preserved.
 SUBST_VARS='${JIRA_SCRIPTS}${PROJECT_KEY}${PROJECT_KEY_LOWER}${JIRA_BASE_URL}${REPOS}${SPECIAL_REPO_PATTERNS}${SPECIAL_REPO_BASE}${SPECIAL_REPO_CASE_PATTERN}${DB_SYNC_REPOS}${CLAUDE_MEMORY_INDEX}${PROJECTS_PREFIX}'
