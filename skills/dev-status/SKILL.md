@@ -10,7 +10,7 @@ Check status for: **$ARGUMENTS**
 
 If `$ARGUMENTS` contains a ticket ID (`msof-XXX`), run the single-ticket check below. If empty or just `status`, run the multi-ticket overview.
 
-> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
 
 ---
 
@@ -26,10 +26,12 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
-cat $WS/.ai/memory/snapshots/<TICKET_ID>.json 2>/dev/null
+source "$WS/config.sh"
+PROJECTS_PREFIX="${PROJECTS_SUBDIR:+$PROJECTS_SUBDIR/}"
+cat $WS/memory/snapshots/<TICKET_ID>.json 2>/dev/null
 
-for REPO in ${REPOS}; do
-  BASE="master"; case "$REPO" in ${SPECIAL_REPO_CASE_PATTERN}) BASE="${SPECIAL_REPO_BASE}";; esac
+for REPO in $REPOS; do
+  BASE="master"; case "$REPO" in ${SPECIAL_REPO_PATTERNS// /|}) BASE="$SPECIAL_REPO_BASE";; esac
   git -C $WS/${PROJECTS_PREFIX}$REPO fetch origin -q 2>/dev/null
   BRANCH=$(git -C $WS/${PROJECTS_PREFIX}$REPO branch -a | grep -i "<TICKET_ID>" | head -1 | xargs)
   [ -n "$BRANCH" ] && echo "$REPO: $BRANCH" && git -C $WS/${PROJECTS_PREFIX}$REPO log $BASE..HEAD --oneline 2>/dev/null | head -3
@@ -61,8 +63,10 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
+source "$WS/config.sh"
+PROJECTS_PREFIX="${PROJECTS_SUBDIR:+$PROJECTS_SUBDIR/}"
 
-for REPO in ${REPOS}; do
+for REPO in $REPOS; do
   git -C $WS/${PROJECTS_PREFIX}$REPO branch -a 2>/dev/null | grep -oiE "(feature|fix)/${PROJECT_KEY_LOWER}-[0-9]+" | sort -u
 done | sort -u
 ```

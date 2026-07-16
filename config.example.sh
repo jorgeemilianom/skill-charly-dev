@@ -5,9 +5,9 @@
 
 # ── Jira ─────────────────────────────────────
 # Path to the jira-communication scripts directory.
-# Leave empty to use the copy vendored in this repo (scripts/jira-communication) —
-# install.sh copies it into your project automatically. Only set this to point
-# at your own separate jira-communication installation instead.
+# Leave empty to use the copy vendored in this repo (scripts/jira-communication),
+# resolved directly at runtime by each skill. Only set this to point at your own
+# separate jira-communication installation instead.
 export JIRA_SCRIPTS=""
 
 # Jira project key (uppercase). Used in issue IDs and search queries.
@@ -47,8 +47,7 @@ export DB_SYNC_REPOS=""
 export CLAUDE_MEMORY_INDEX=""
 
 # ── Notes ────────────────────────────────────
-# Run ./install.sh FROM INSIDE the target project (the directory containing this
-# project's CLAUDE.md) — it installs into <project>/.ai/skills, not a global location.
-#
-# To update after a git pull:
-#   cd /path/to/skill-charly-dev && git pull && (cd /path/to/your/project && /path/to/skill-charly-dev/install.sh)
+# Run /dev-setup after cloning (from Claude Code or Codex, inside this repo) to
+# scaffold this file interactively instead of editing it by hand — it also checks
+# required tools, Jira credentials, GitHub auth, and that REPOS are cloned under
+# projects/. Skills read this file directly at runtime; there is no install step.

@@ -12,20 +12,31 @@ Extract ticket ID (`msof-XXX`) from `$ARGUMENTS`. Normalize to uppercase: `MSOF-
 
 Optional subcommand: `review` — skip directly to Phase 2 (handle existing review comments).
 
-> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
 
 ---
 
 ## Repo and branch detection (run first, reuse throughout)
 
 ```bash
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+source "$WS/config.sh"
+
 # Detect which repo we're in
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
 REPO_NAME=$(basename "$REPO_ROOT")
 
 # Determine base branch and diff base
 BASE_BRANCH="master"
-case "$REPO_NAME" in ${SPECIAL_REPO_CASE_PATTERN}) BASE_BRANCH="${SPECIAL_REPO_BASE}";; esac
+case "$REPO_NAME" in ${SPECIAL_REPO_PATTERNS// /|}) BASE_BRANCH="$SPECIAL_REPO_BASE";; esac
 
 # Determine PR title prefix from branch name
 CURRENT_BRANCH=$(git branch --show-current)
@@ -85,10 +96,11 @@ For each test file, note what scenario it covers (inferred from test function na
 
 **2 — Check for specs (QuintaApp-Api only):**
 
-If working in `QuintaApp-Api` and a spec file exists for the feature being implemented:
+If working in `QuintaApp-Api` (`$REPO_NAME` from the detection block above) and a spec file exists for
+the feature being implemented — paths relative to that repo's own root:
 ```bash
-ls ${PROJECTS_PREFIX}QuintaApp-Api/specs/features/ 2>/dev/null
-cat ${PROJECTS_PREFIX}QuintaApp-Api/specs/features/<feature-name>.md 2>/dev/null
+ls specs/features/ 2>/dev/null
+cat specs/features/<feature-name>.md 2>/dev/null
 ```
 Extract acceptance criteria from the spec if found.
 
@@ -107,7 +119,7 @@ Extract acceptance criteria from the spec if found.
 <omit this section entirely if no spec>
 
 ## Specs
-Specs disponibles en `${PROJECTS_PREFIX}QuintaApp-Api/specs/features/`
+Specs disponibles en `specs/features/` (dentro de QuintaApp-Api)
 <only if a spec was found and used>
 ```
 
@@ -135,7 +147,17 @@ EOF
 After the PR is created, capture the URL from the `gh pr create` output, then post a Jira comment automatically (no authorization needed):
 
 ```bash
-JIRA_SKILL=${JIRA_SCRIPTS}
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+source "$WS/config.sh"
+JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
 uv run $JIRA_SKILL/workflow/jira-comment.py add "<TICKET_ID>" "PR abierto
 
 Titulo: [$PR_PREFIX][<TICKET_ID>] <brief description>
@@ -190,8 +212,8 @@ def workspace_root():
     return p if os.path.exists(os.path.join(p, 'CLAUDE.md')) else g
 
 WS = workspace_root()
-os.makedirs(f'{WS}/.ai/memory/review_rounds', exist_ok=True)
-path = f'{WS}/.ai/memory/review_rounds/<TICKET_ID>.json'
+os.makedirs(f'{WS}/memory/review_rounds', exist_ok=True)
+path = f'{WS}/memory/review_rounds/<TICKET_ID>.json'
 try:
     data = json.load(open(path))
 except Exception:
@@ -210,7 +232,7 @@ with open(path, 'w') as f:
 
 1. Analyze each comment and determine the fix.
 2. Implement all fixes.
-3. **If a spec exists in `${PROJECTS_PREFIX}QuintaApp-Api/specs/features/` and any fix alters a design decision** (not just a bug fix, but changes approach, interface, or behavior): update the relevant section of the spec before committing. Specs must describe what shipped, not the original plan.
+3. **If a spec exists in `specs/features/` (inside QuintaApp-Api) and any fix alters a design decision** (not just a bug fix, but changes approach, interface, or behavior): update the relevant section of the spec before committing. Specs must describe what shipped, not the original plan.
 4. Run validation for the current repo:
 
    **QuintaApp-Api:**

@@ -1,10 +1,6 @@
+# Real data — never committed to this public repo (see "Self-hosted usage" in README.md):
 config.sh
-
-# Self-hosted workspace layer (see "Self-hosted usage" in README.md):
-# when this repo doubles as your workspace root, install.sh's generated
-# output and your actual project checkouts live alongside the tracked
-# skill sources but must never be committed to this public repo.
-.ai/
-.claude/
-AGENTS.md
+memory/
+scripts/local/
 projects/
+.claude/settings.local.json

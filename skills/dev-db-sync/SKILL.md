@@ -8,11 +8,11 @@ allowed-tools: Bash Read Write
 
 Run DB sync for: **$ARGUMENTS**
 
-`$ARGUMENTS` is `<project>` or `config <project>`. Requires `${DB_SYNC_REPOS}` to be set in `config.sh`. If empty, tell the user db-sync isn't configured for this workspace and stop.
+`$ARGUMENTS` is `<project>` or `config <project>`. Requires `DB_SYNC_REPOS` to be set in `config.sh`. If empty, tell the user db-sync isn't configured for this workspace and stop.
 
-`<project>` must be one of: `${DB_SYNC_REPOS}`. If omitted, ask which project.
+`<project>` must be one of the repos listed in `DB_SYNC_REPOS` (`config.sh`). If omitted, ask which project.
 
-> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
 
 ---
 
@@ -28,28 +28,29 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
-cat $WS/.ai/memory/vps-config.json 2>/dev/null
+source "$WS/config.sh"
+cat $WS/memory/vps-config.json 2>/dev/null
 ```
 
 **If the file does not exist**, run the first-time setup below and save it before continuing.
 
 ### First-time setup (interactive)
 
-Ask the user for the shared connection fields once, then the per-project fields for each entry in `${DB_SYNC_REPOS}`:
+Ask the user for the shared connection fields once, then the per-project fields for each entry in `DB_SYNC_REPOS` (`config.sh`):
 
 ```
 Host de la VPS productiva (ej: 123.45.67.89 o prod.ejemplo.com):
 Usuario SSH (ej: jorge):
 Ruta a la clave SSH (ej: ~/.ssh/id_rsa):
 
-Para cada proyecto en ${DB_SYNC_REPOS}:
+Para cada proyecto en DB_SYNC_REPOS:
   Directorio en la VPS productiva (ej: /var/www/<project>):
   Comando make para generar el backup (ej: db-backup):
   Ruta del archivo de backup generado en la VPS (ej: /tmp/backup.sql):
   Comando make para importar el backup localmente (ej: db-import FILE=):
 ```
 
-Save to `$WS/.ai/memory/vps-config.json`, with one entry under `projects` per repo in `${DB_SYNC_REPOS}`:
+Save to `$WS/memory/vps-config.json`, with one entry under `projects` per repo in `DB_SYNC_REPOS`:
 ```json
 {
   "production_vps": {
@@ -91,17 +92,17 @@ If the command fails, show stderr and abort.
 
 ## Step 3 — Download the backup to this VPS
 
-Local destination: `$WS/.ai/memory/db-backups/<project>_<YYYY-MM-DD_HH-MM-SS>.sql`
+Local destination: `$WS/memory/db-backups/<project>_<YYYY-MM-DD_HH-MM-SS>.sql`
 
 ```bash
-mkdir -p $WS/.ai/memory/db-backups
+mkdir -p $WS/memory/db-backups
 scp -i <key_path> <user>@<host>:<remote_backup_file> \
-    "$WS/.ai/memory/db-backups/<project>_$(date +%Y-%m-%d_%H-%M-%S).sql"
+    "$WS/memory/db-backups/<project>_$(date +%Y-%m-%d_%H-%M-%S).sql"
 ```
 
 Confirm success by checking the downloaded file size:
 ```bash
-ls -lh "$WS/.ai/memory/db-backups/<project>_<timestamp>.sql"
+ls -lh "$WS/memory/db-backups/<project>_<timestamp>.sql"
 ```
 
 If file is 0 bytes or missing, abort with an error.
@@ -113,7 +114,9 @@ Ask:
 
 If confirmed:
 ```bash
-make -C $WS/<project> <local_import_make_target>"$WS/.ai/memory/db-backups/<downloaded_file>"
+source "$WS/config.sh"
+PROJECTS_PREFIX="${PROJECTS_SUBDIR:+$PROJECTS_SUBDIR/}"
+make -C $WS/${PROJECTS_PREFIX}<project> <local_import_make_target>"$WS/memory/db-backups/<downloaded_file>"
 ```
 
 If the Makefile target does not exist, warn and suggest the user run the import manually, showing the exact file path.

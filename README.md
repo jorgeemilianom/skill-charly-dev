@@ -2,7 +2,7 @@
 
 **From Jira ticket to merged PR — one command, full workflow. Works from Claude Code and Codex.**
 
-A set of skills that act as a senior engineer pair: reads your ticket, explores the codebase, implements the changes, runs the tests, opens the PR, handles review comments, and remembers every decision along the way. Installs *inside* your project, not your home directory, so it travels with the repo and works the same from either agent.
+A set of skills that act as a senior engineer pair: reads your ticket, explores the codebase, implements the changes, runs the tests, opens the PR, handles review comments, and remembers every decision along the way. Self-hosted — this repo *is* your workspace, not something you install into one.
 
 ---
 
@@ -27,7 +27,7 @@ you                    agent
 /dev PROJ-42
                        reads ticket from Jira
                        explores codebase (grep, git log, file reads)
-                       loads past decisions from .ai/memory/
+                       loads past decisions from memory/
                        ─────────────────────────────
                        Technical Assessment
                          · approach proposed
@@ -59,12 +59,12 @@ review comments arrive
 PR merged
 
 /dev-reflect PROJ-42 closing
-                       saves learnings to .ai/memory/
+                       saves learnings to memory/
                        transitions Jira to Done
                        posts closing comment
 ```
 
-The longer you use it, the better it gets — `.ai/memory/` accumulates your project's decisions, recurring mistakes, and patterns across tickets.
+The longer you use it, the better it gets — `memory/` accumulates your project's decisions, recurring mistakes, and patterns across tickets.
 
 ---
 
@@ -75,6 +75,7 @@ routes everything else to these siblings:
 
 | Skill | What it does |
 |-------|--------------|
+| [`/dev-setup`](skills/dev-setup/SKILL.md) | First-run setup and environment health check: config.sh, required tools, Jira credentials, GitHub auth, repos present under `projects/`. |
 | [`/dev`](skills/dev/SKILL.md) | Orchestrator. Full core loop for a ticket ID; routes freeform ideas, PR URLs, and subcommands to the skills below. |
 | [`/dev-create`](skills/dev-create/SKILL.md) | Turns a freeform idea into a filed Jira ticket — drafts the spec with you, resolves the epic from a cached list. |
 | [`/dev-assess`](skills/dev-assess/SKILL.md) | Technical deep dive before writing any code. Produces a structured assessment with confidence score and waits for your go-ahead. |
@@ -90,83 +91,63 @@ routes everything else to these siblings:
 
 ## Repo layout
 
+This repo doubles as your workspace — clone it and it *is* the folder you work in, no separate install
+step. `skills/` is real, tracked source; `.claude/skills/<name>` are committed symlinks into it, so
+Claude Code discovers all ten skills the moment you `cd` in after `git clone`.
+
 ```
-skill-charly-dev/
-├── skills/<name>/SKILL.md       # the 10 skills (source of truth)
-├── scripts/jira-communication/  # vendored third-party Jira CLI (see NOTICE.md)
-├── templates/                   # AGENTS.md.template, agent-context.md.template
-├── config.example.sh            # copy to config.sh and fill in your values
-├── config.sh                    # gitignored, your actual values
-└── install.sh                   # generates + installs into a target project
+skill-charly-dev/               (== your workspace, one folder, one repo)
+├── skills/<name>/SKILL.md      ← tracked, public — the 10 skills, canonical source
+├── .claude/skills/<name>       ← tracked symlinks → ../../skills/<name>, for Claude discovery
+├── scripts/
+│   ├── jira-communication/     ← tracked, vendored third-party Jira CLI (see NOTICE.md)
+│   └── local/                  ← gitignored — scripts the skills write for themselves over time
+├── agent-context.md            ← tracked — shared Codex/Claude adapter (prefs, memory map, skill map)
+├── AGENTS.md                   ← tracked — Codex-native root pointer
+├── CLAUDE.md                   ← tracked — your project map, no secrets
+├── config.example.sh           ← tracked — template, copy to config.sh
+├── config.sh                   ← gitignored — your actual values (no secrets either — see Jira below)
+├── memory/                     ← gitignored — real ticket/decision/pattern data
+└── projects/                   ← gitignored — your actual repo checkouts
+    ├── your-api/
+    └── your-frontend/
 ```
 
-`install.sh` reads `skills/` and `templates/` and writes the generated output into
-`<project>/.ai/` — see the next section for what that looks like on the installed side.
+There's no generation step and no `install.sh` — skills read `config.sh` directly at runtime
+(`source config.sh` inside the relevant bash blocks), so editing config takes effect immediately.
 
 ---
 
 ## Cross-tool: Claude Code + Codex
 
-Installing writes into your project, not `~/.claude/skills`:
-
-```
-<project>/
-├── AGENTS.md                    # Codex-native root pointer
-├── CLAUDE.md                    # your existing Claude-native file, untouched
-├── .ai/
-│   ├── agent-context.md         # shared adapter: prefs, memory locations, skill map
-│   └── skills/<name>/SKILL.md   # canonical skill sources
-└── .claude/skills/<name>        # symlinks → ../../.ai/skills/<name>, for Claude discovery
-```
-
-Claude Code auto-discovers the symlinked skills the moment you're in the project — no extra config.
+Claude Code auto-discovers the symlinked skills the moment you're in the repo — no config needed.
 Codex has no reliable cross-version skills-directory auto-discovery, so `AGENTS.md` (which Codex always
-reads) points to `.ai/agent-context.md`, which tells it exactly which `.ai/skills/<name>/SKILL.md` to
-read for a given request.
-
----
-
-## Self-hosted usage
-
-`install.sh` only needs a `CLAUDE.md` somewhere at or above `$PWD` — it doesn't care whether that's a
-separate project or this repo's own root. If you don't need to share the skill definitions with anyone
-else, you can skip having a separate template clone + target project and just run `install.sh` from
-inside this repo itself: put your `CLAUDE.md` at the repo root and your project checkouts under
-`projects/`. Everything generated (`.ai/`, `.claude/`, `AGENTS.md`, `projects/`) is gitignored, so this
-stays safe to keep in a public repo — only `skills/`, `scripts/`, `templates/`, `install.sh`,
-`config.example.sh` and your own `CLAUDE.md` are tracked.
-
-```
-skill-charly-dev/            (== your workspace, one folder, one repo)
-├── skills/ scripts/ templates/ install.sh   ← tracked, public
-├── CLAUDE.md                                ← tracked (your project map, no secrets)
-├── config.sh                                ← gitignored (credentials)
-├── .ai/  .claude/  AGENTS.md                ← gitignored (generated + your real memory data)
-└── projects/                                ← gitignored (your actual repo checkouts)
-    ├── your-api/
-    └── your-frontend/
-```
+reads) points to `agent-context.md`, which tells it exactly which `skills/<name>/SKILL.md` to read for a
+given request, and where to find `config.sh` for project-specific values.
 
 ---
 
 ## Quick start
 
 ```bash
-# 1. clone the skill repo anywhere (it's a template, not your project —
-#    unless you're doing the self-hosted setup above, in which case this clone IS your project)
+# 1. clone — this repo becomes your workspace
 git clone https://github.com/jorgeemilianom/skill-charly-dev.git ~/skills/charly-dev
 cd ~/skills/charly-dev
-
-# 2. configure (your Jira, your repos)
-cp config.example.sh config.sh
-$EDITOR config.sh
-
-# 3. install — run FROM INSIDE your target project (needs a CLAUDE.md there)
-cd /path/to/your/project
-~/skills/charly-dev/install.sh
 ```
 
-Then, in Claude Code or Codex, from inside that project:
+Then, in Claude Code or Codex, from inside the repo:
+
+```
+/dev-setup
+```
+
+This scaffolds `config.sh` interactively (Jira project key, repos, base branches — no secrets), checks
+`gh`/`uv` are installed, checks Jira credentials and GitHub auth (both need a real terminal — it'll tell
+you exactly what to run), creates `projects/`, `scripts/local/`, `memory/`, and reports which of your
+configured `REPOS` still need `git clone`ing. Re-run it any time — it's idempotent and safe to use as a
+health check.
+
+Once it reports everything OK:
 
 ```
 /dev-create "short description of what you want to build"
@@ -178,12 +159,16 @@ or, for an existing ticket:
 /dev PROJ-42
 ```
 
+`/dev` also runs this same precondition check itself before every ticket, and offers to run
+`/dev-setup` if something's missing — you don't have to remember to run it first.
+
 ---
 
 ## Common commands
 
 | Situation | Command |
 |-----------|---------|
+| First clone, or credentials/config check | `/dev-setup` |
 | Spec + file a new ticket | `/dev-create "<idea>"` |
 | Start a new ticket | `/dev PROJ-42` |
 | Resume after a break | `/dev-resume PROJ-42` |
@@ -199,11 +184,15 @@ or, for an existing ticket:
 
 ## Configuration
 
-Everything project-specific lives in `config.sh` (gitignored — never committed).
+Everything project-specific lives in `config.sh` (gitignored — never committed, though it holds no
+secrets either; Jira/GitHub credentials live outside this repo, see below).
 
 ```bash
 cp config.example.sh config.sh
 ```
+
+Skills `source` this file directly at runtime, so there's no regeneration step — edit it and the next
+skill invocation picks it up.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
@@ -212,19 +201,21 @@ cp config.example.sh config.sh
 | `PROJECT_KEY_LOWER` | Same, lowercase (branch names) | `proj` |
 | `JIRA_BASE_URL` | Your Jira instance URL | `https://your-org.atlassian.net` |
 | `REPOS` | Repo directories, space-separated | `backend-api frontend-app` |
+| `PROJECTS_SUBDIR` | Subfolder repos live under | `projects` |
 | `SPECIAL_REPO_PATTERNS` | Repos (glob patterns) with a non-standard base branch | `frontend-app legacy-*` |
 | `SPECIAL_REPO_BASE` | Their base branch | `develop` |
 | `DB_SYNC_REPOS` | Repos supporting `/dev-db-sync` — leave empty to disable | `backend-api` |
 | `CLAUDE_MEMORY_INDEX` | Path to this project's Claude auto-memory `MEMORY.md`, surfaced to Codex as a legacy fallback | `~/.claude/projects/<escaped-path>/memory/MEMORY.md` |
 
+`/dev-setup` scaffolds and asks for all of these interactively — editing by hand is only needed to
+change a value later.
+
+Jira and GitHub credentials are **not** in `config.sh` — `/dev-setup` walks you through both, but the
+actual secret-entry step always happens in your own terminal, never through the agent:
+- Jira: `uv run scripts/jira-communication/scripts/core/jira-setup.py` → writes `~/.env.jira`
+- GitHub: `gh auth login`
+
 The skills also contain **architecture rules** and **keyword-to-repo mappings** tailored as examples — look for `> CUSTOMIZE` comments in `skills/dev-review/SKILL.md` and `skills/dev-assess/SKILL.md` and replace them with your stack's conventions.
-
-After editing config or skill templates, regenerate from inside your project:
-
-```bash
-cd ~/skills/charly-dev && git pull
-(cd /path/to/your/project && ~/skills/charly-dev/install.sh)
-```
 
 ---
 
@@ -235,5 +226,5 @@ cd ~/skills/charly-dev && git pull
 | [Claude Code](https://claude.ai/code) and/or [Codex CLI](https://developers.openai.com/codex) | see docs |
 | [`gh`](https://cli.github.com/) | `brew install gh` / `apt install gh` |
 | [`uv`](https://github.com/astral-sh/uv) | `curl -Ls https://astral.sh/uv/install.sh \| sh` |
-| `envsubst` | `brew install gettext` / `apt install gettext` |
-| `JIRA_TOKEN` env var | Personal Access Token from your Jira instance |
+
+`/dev-setup` checks both `gh` and `uv` are on `PATH` and tells you if either is missing.

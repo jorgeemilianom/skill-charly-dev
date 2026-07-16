@@ -6,7 +6,7 @@ This workspace uses a shared adapter so Codex and Claude Code load the same proj
 
 Before doing project work, read:
 
-1. `.ai/agent-context.md`
+1. `agent-context.md`
 2. `CLAUDE.md`
 3. The local `AGENTS.md` and/or `CLAUDE.md` inside the affected repo subfolder, if present.
 

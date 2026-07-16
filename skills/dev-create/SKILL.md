@@ -10,7 +10,7 @@ Turn this idea into a filed Jira ticket: **$ARGUMENTS**
 
 `$ARGUMENTS` is a freeform description — there is no ticket ID yet, that's what this skill produces.
 
-> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
 
 ---
 
@@ -69,22 +69,24 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
-cat $WS/.ai/memory/epics.json 2>/dev/null
+cat $WS/memory/epics.json 2>/dev/null
 ```
 
-If it exists, show the cached `${PROJECT_KEY}` epics and ask the user to pick one (or "ninguna").
+If it exists, show the cached epics for `PROJECT_KEY` (from `config.sh`) and ask the user to pick one
+(or "ninguna").
 
 If it's missing, or the user wants a refreshed list, or none of the cached epics fit, query Jira and
 rewrite the cache:
 ```bash
-JIRA_SKILL=${JIRA_SCRIPTS}
-uv run $JIRA_SKILL/core/jira-search.py --json query "project = ${PROJECT_KEY} AND issuetype = Epic ORDER BY created DESC"
+source "$WS/config.sh"
+JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+uv run $JIRA_SKILL/core/jira-search.py --json query "project = $PROJECT_KEY AND issuetype = Epic ORDER BY created DESC"
 ```
 
-Cache format — `$WS/.ai/memory/epics.json`, keyed by project so multiple projects can share the file:
+Cache format — `$WS/memory/epics.json`, keyed by project so multiple projects can share the file:
 ```json
 {
-  "${PROJECT_KEY}": {
+  "<PROJECT_KEY>": {
     "MSOF-10": "Epic name",
     "MSOF-24": "Another epic name"
   },
@@ -99,14 +101,25 @@ confirmation before touching Jira.
 
 ## Step 5 — Create the ticket
 
-**Do not use `--parent <EPIC_KEY>` directly** — verified against `${PROJECT_KEY}` (team-managed
+**Do not use `--parent <EPIC_KEY>` directly** — verified against `PROJECT_KEY` (team-managed
 project): `--parent` forces the issue type down to the project's subtask type regardless of `-t`,
 turning the new issue into a subtask of the epic instead of a top-level Story/Task/Bug linked to it.
 Use `--fields-json` instead, which preserves the requested type:
 
 ```bash
-uv run $JIRA_SKILL/workflow/jira-create.py issue ${PROJECT_KEY} "<summary>" -t <type> -d "<description>" --fields-json '{"parent": {"key": "<EPIC_KEY>"}}' --dry-run
-uv run $JIRA_SKILL/workflow/jira-create.py issue ${PROJECT_KEY} "<summary>" -t <type> -d "<description>" --fields-json '{"parent": {"key": "<EPIC_KEY>"}}'
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+source "$WS/config.sh"
+JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+uv run $JIRA_SKILL/workflow/jira-create.py issue $PROJECT_KEY "<summary>" -t <type> -d "<description>" --fields-json '{"parent": {"key": "<EPIC_KEY>"}}' --dry-run
+uv run $JIRA_SKILL/workflow/jira-create.py issue $PROJECT_KEY "<summary>" -t <type> -d "<description>" --fields-json '{"parent": {"key": "<EPIC_KEY>"}}'
 ```
 
 If a future Jira project configured through this template is company-managed instead of team-managed,

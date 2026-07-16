@@ -10,7 +10,7 @@ Resume development context for: **$ARGUMENTS**
 
 `$ARGUMENTS` is the ticket ID (`msof-XXX`).
 
-> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
 
 ---
 
@@ -18,9 +18,6 @@ Resume development context for: **$ARGUMENTS**
 
 Run in parallel:
 ```bash
-JIRA_SKILL=${JIRA_SCRIPTS}
-uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
-
 WS=$(python3 -c "
 import os, subprocess
 try:
@@ -30,11 +27,16 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
-cat $WS/.ai/memory/snapshots/<TICKET_ID>.json 2>/dev/null
-cat $WS/.ai/memory/assessments/<TICKET_ID>.json 2>/dev/null
+source "$WS/config.sh"
+JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+PROJECTS_PREFIX="${PROJECTS_SUBDIR:+$PROJECTS_SUBDIR/}"
+uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
 
-for REPO in ${REPOS}; do
-  BASE="master"; case "$REPO" in ${SPECIAL_REPO_CASE_PATTERN}) BASE="${SPECIAL_REPO_BASE}";; esac
+cat $WS/memory/snapshots/<TICKET_ID>.json 2>/dev/null
+cat $WS/memory/assessments/<TICKET_ID>.json 2>/dev/null
+
+for REPO in $REPOS; do
+  BASE="master"; case "$REPO" in ${SPECIAL_REPO_PATTERNS// /|}) BASE="$SPECIAL_REPO_BASE";; esac
   BRANCH=$(git -C $WS/${PROJECTS_PREFIX}$REPO branch -a | grep -i "<TICKET_ID>" | head -1 | tr -d ' ')
   if [ -n "$BRANCH" ]; then
     echo "=== $REPO ==="

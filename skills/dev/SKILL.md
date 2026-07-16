@@ -1,6 +1,6 @@
 ---
 name: dev
-description: "Main development orchestrator. Accepts a PROJ-XXX ticket ID, a freeform idea with no ticket yet, a PR URL (own PR), or 'review <PR URL>' (teammate's PR). Runs the core ticket loop (branch setup, development, validation, commit, push) and routes everything else to sibling dev-* skills: dev-create, dev-assess, dev-pr, dev-reflect, dev-resume, dev-review, dev-migration, dev-status, dev-db-sync."
+description: "Main development orchestrator. Accepts a PROJ-XXX ticket ID, a freeform idea with no ticket yet, a PR URL (own PR), or 'review <PR URL>' (teammate's PR). Checks setup prerequisites first, then runs the core ticket loop (branch setup, development, validation, commit, push) and routes everything else to sibling dev-* skills: dev-setup, dev-create, dev-assess, dev-pr, dev-reflect, dev-resume, dev-review, dev-migration, dev-status, dev-db-sync."
 allowed-tools: Bash Read Write
 ---
 
@@ -31,10 +31,33 @@ Throughout this workflow, act as a **senior engineer** familiar with the three M
 ## Build the Project Toolbox as You Go
 
 This applies across `/dev` and every sibling skill. Before improvising a multi-step shell/git/gh/jq
-procedure, check `.ai/vendor/local/MANIFEST.json` — a script may already exist for it. When you notice
+procedure, check `scripts/local/MANIFEST.json` — a script may already exist for it. When you notice
 a deterministic, repeatable procedure that took real effort to get right, externalize it there instead
 of re-deriving it next session. See [references/local-scripting.md](references/local-scripting.md) for
 the full convention (when to script, how to register it, naming).
+
+---
+
+## Phase -1: Preconditions
+
+Run before anything else, every invocation — cheap, no prompts:
+
+```bash
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+[ -f "$WS/config.sh" ] && { [ -f ~/.env.jira ] || [ -f ~/.jira/profiles.json ]; } && gh auth status &>/dev/null && echo OK || echo MISSING
+```
+
+If `MISSING`: "Faltan prerequisitos antes de arrancar (credenciales o config). ¿Corro `/dev-setup` para
+revisar qué falta?" If confirmed, invoke `/dev-setup` and, once it reports everything OK, resume with
+the original `$ARGUMENTS`. If the user declines, proceed anyway but expect the affected step to fail.
 
 ---
 
@@ -46,6 +69,7 @@ Parse `$ARGUMENTS` and dispatch immediately.
 
 | Argument | Action |
 |----------|--------|
+| `setup` | → `/dev-setup` |
 | freeform idea/description, no ticket ID | → `/dev-create` |
 | starts with `review ` + URL | → `/dev-review` |
 | URL containing `http` or `/pull/` | Entry point B (below) — Own PR |
@@ -74,7 +98,17 @@ gh pr view "$ARGUMENTS" --json title,body,headRefName,baseRefName,state,url,revi
 1. Extract ticket ID from the branch name (e.g. `feature/msof-42` → `MSOF-42`).
 2. Read the Jira ticket:
    ```bash
-   JIRA_SKILL=${JIRA_SCRIPTS}
+   WS=$(python3 -c "
+   import os, subprocess
+   try:
+       g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+   except:
+       g = os.getcwd()
+   p = os.path.dirname(g)
+   print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+   ")
+   source "$WS/config.sh"
+   JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
    uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
    ```
 3. Rename session: `/rename MSOF-XXX | <ticket summary>`
@@ -101,7 +135,7 @@ def workspace_root():
 
 WS = workspace_root()
 try:
-    profile = json.load(open(f'{WS}/.ai/memory/user_profile.json'))
+    profile = json.load(open(f'{WS}/memory/user_profile.json'))
 except Exception:
     profile = {}
 ```
@@ -116,7 +150,17 @@ Apply the profile throughout this session:
 
 **Step 1 — Read Jira ticket:**
 ```bash
-JIRA_SKILL=${JIRA_SCRIPTS}
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+source "$WS/config.sh"
+JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
 ```
 
@@ -137,23 +181,35 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
-git -C $WS/${PROJECTS_PREFIX}QuintaApp-Api     fetch origin 2>/dev/null; git -C $WS/${PROJECTS_PREFIX}QuintaApp-Api     branch -a | grep -i "<TICKET_ID>"
-git -C $WS/${PROJECTS_PREFIX}QuintaApp-Frontend fetch origin 2>/dev/null; git -C $WS/${PROJECTS_PREFIX}QuintaApp-Frontend branch -a | grep -i "<TICKET_ID>"
-git -C $WS/${PROJECTS_PREFIX}CloudHubCorp      fetch origin 2>/dev/null; git -C $WS/${PROJECTS_PREFIX}CloudHubCorp      branch -a | grep -i "<TICKET_ID>"
+git -C $WS/projects/QuintaApp-Api      fetch origin 2>/dev/null; git -C $WS/projects/QuintaApp-Api      branch -a | grep -i "<TICKET_ID>"
+git -C $WS/projects/QuintaApp-Frontend fetch origin 2>/dev/null; git -C $WS/projects/QuintaApp-Frontend branch -a | grep -i "<TICKET_ID>"
+git -C $WS/projects/CloudHubCorp       fetch origin 2>/dev/null; git -C $WS/projects/CloudHubCorp       branch -a | grep -i "<TICKET_ID>"
 ```
 
 Also check for a saved snapshot:
 ```bash
-cat $WS/.ai/memory/snapshots/<TICKET_ID>.json 2>/dev/null
+cat $WS/memory/snapshots/<TICKET_ID>.json 2>/dev/null
 ```
 If snapshot exists, use it to fast-track context. Still run git/PR checks to verify it's not stale.
 
 **Branch(es) exist (resuming):** For each repo with a matching branch, collect independently.
-`<repo_path>` resolves to `$WS/${PROJECTS_PREFIX}<repo-name>`:
+`<repo_path>` resolves to `$WS/projects/<repo-name>` (or `$WS/<repo-name>` if `PROJECTS_SUBDIR` is
+empty in `config.sh`):
 ```bash
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+source "$WS/config.sh"
+
 # Detect base branch for this repo
 REPO_NAME=$(basename <repo_path>)
-BASE_BRANCH="master"; case "$REPO_NAME" in ${SPECIAL_REPO_CASE_PATTERN}) BASE_BRANCH="${SPECIAL_REPO_BASE}";; esac
+BASE_BRANCH="master"; case "$REPO_NAME" in ${SPECIAL_REPO_PATTERNS// /|}) BASE_BRANCH="$SPECIAL_REPO_BASE";; esac
 
 git -C <repo_path> log $BASE_BRANCH..HEAD --oneline
 git -C <repo_path> status
@@ -184,7 +240,7 @@ Delegated entirely to `/dev-assess`. Invoke it and follow its instructions:
 
 `/dev-assess` handles everything in **one combined confirmation**:
 - Detects affected repos and does architecture-aware codebase exploration
-- Loads `.ai/memory/` context (historical patterns, decisions, mistakes)
+- Loads `memory/` context (historical patterns, decisions, mistakes)
 - Queries the Jira epic in parallel
 - Presents the **Technical Assessment** with confidence score and repo/layer breakdown
 - **Fast path**: if confidence ≥ 0.9 and no open questions, presents a condensed confirmation
@@ -211,8 +267,19 @@ At any point, if relevant information is discovered that is **not already in the
 Detect the repo(s) affected by the ticket (from Phase 0.5). For each affected repo:
 
 ```bash
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+source "$WS/config.sh"
+
 REPO_NAME=$(basename <repo_path>)
-BASE_BRANCH="master"; case "$REPO_NAME" in ${SPECIAL_REPO_CASE_PATTERN}) BASE_BRANCH="${SPECIAL_REPO_BASE}";; esac
+BASE_BRANCH="master"; case "$REPO_NAME" in ${SPECIAL_REPO_PATTERNS// /|}) BASE_BRANCH="$SPECIAL_REPO_BASE";; esac
 
 # Branch prefix from ticket context:
 # feature/msof-XXX for new features
@@ -242,7 +309,17 @@ git -C <repo_path> rev-list --count origin/$BASE_BRANCH..$BRANCH_NAME   # how fa
 Applied if the user confirmed it in `/dev-assess`. Skip if already In Progress or branch already existed.
 
 ```bash
-JIRA_SKILL=${JIRA_SCRIPTS}
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+source "$WS/config.sh"
+JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
 uv run $JIRA_SKILL/workflow/jira-transition.py do "<TICKET_ID>" "In Progress"
 ```
 
@@ -284,8 +361,8 @@ If the ticket affects more than one repo, implement in this order:
 
 **API contract check:** If you modify an existing endpoint (path, method, request/response shape), grep the other repos:
 ```bash
-grep -r "<endpoint_path>" ${PROJECTS_PREFIX}QuintaApp-Frontend/src/services/ 2>/dev/null
-grep -r "<endpoint_path>" ${PROJECTS_PREFIX}CloudHubCorp/ 2>/dev/null
+grep -r "<endpoint_path>" projects/QuintaApp-Frontend/src/services/ 2>/dev/null
+grep -r "<endpoint_path>" projects/CloudHubCorp/ 2>/dev/null
 ```
 If found, review and update the consumer before closing the backend phase.
 
@@ -293,8 +370,8 @@ If found, review and update the consumer before closing the backend phase.
 
 If the ticket requires simultaneous development in more than one repo, use `--worktree` (`-w`) to open each in an isolated git copy:
 ```bash
-claude --worktree -C ${PROJECTS_PREFIX}QuintaApp-Api/
-claude --worktree -C ${PROJECTS_PREFIX}QuintaApp-Frontend/
+claude --worktree -C projects/QuintaApp-Api/
+claude --worktree -C projects/QuintaApp-Frontend/
 ```
 Each worktree operates on an independent copy of the branch. Background agents (Ctrl+B) work normally within each session.
 
@@ -306,26 +383,26 @@ Before committing, run the full validation suite for each affected repo.
 
 **QuintaApp-Api:**
 ```bash
-make -C ${PROJECTS_PREFIX}QuintaApp-Api check   # fmt + vet + lint + test
+make -C projects/QuintaApp-Api check   # fmt + vet + lint + test
 ```
 If `check` target unavailable, fallback:
 ```bash
-cd ${PROJECTS_PREFIX}QuintaApp-Api && go test ./internal/core/... ./internal/adapters/primary/... -race -coverprofile=coverage.out
+cd projects/QuintaApp-Api && go test ./internal/core/... ./internal/adapters/primary/... -race -coverprofile=coverage.out
 go tool cover -func=coverage.out
-cd ${PROJECTS_PREFIX}QuintaApp-Api && golangci-lint run
+cd projects/QuintaApp-Api && golangci-lint run
 ```
 Coverage gate: **80% minimum** on `./internal/core/...` and `./internal/adapters/primary/...`.
 If any package falls below 80%, list exactly which ones and their percentages — do not proceed until fixed.
 
 **QuintaApp-Frontend:**
 ```bash
-cd ${PROJECTS_PREFIX}QuintaApp-Frontend && npm run test && npm run lint
+cd projects/QuintaApp-Frontend && npm run test && npm run lint
 ```
 
 **CloudHubCorp:**
 ```bash
-make -C ${PROJECTS_PREFIX}CloudHubCorp test
-make -C ${PROJECTS_PREFIX}CloudHubCorp build   # always rebuild after any Backoffice change
+make -C projects/CloudHubCorp test
+make -C projects/CloudHubCorp build   # always rebuild after any Backoffice change
 ```
 
 Fix any failures before moving on. Do not skip or work around failing tests.
@@ -374,8 +451,18 @@ Rules:
 - **Ask for explicit user authorization** before running `git push`.
 - If branch has diverged from base, rebase (never merge):
   ```bash
+  WS=$(python3 -c "
+  import os, subprocess
+  try:
+      g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+  except:
+      g = os.getcwd()
+  p = os.path.dirname(g)
+  print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+  ")
+  source "$WS/config.sh"
   REPO_NAME=$(basename $(git rev-parse --show-toplevel))
-  BASE="master"; case "$REPO_NAME" in ${SPECIAL_REPO_CASE_PATTERN}) BASE="${SPECIAL_REPO_BASE}";; esac
+  BASE="master"; case "$REPO_NAME" in ${SPECIAL_REPO_PATTERNS// /|}) BASE="$SPECIAL_REPO_BASE";; esac
   git fetch origin && git rebase origin/$BASE
   ```
 - If conflicts, resolve and continue the rebase.
@@ -406,7 +493,7 @@ Delegated to `/dev-pr` with the `review` subcommand:
 /dev-pr <TICKET_ID> review
 ```
 
-`/dev-pr` will: record the review round in `.ai/memory/`, analyze each comment, implement fixes, re-run validation per repo, commit, and ask for push authorization.
+`/dev-pr` will: record the review round in `memory/`, analyze each comment, implement fixes, re-run validation per repo, commit, and ask for push authorization.
 
 ---
 
@@ -414,6 +501,7 @@ Delegated to `/dev-pr` with the `review` subcommand:
 
 Not inlined here — each is independently invokable and has its own SKILL.md:
 
+- `/dev-setup` — first-run setup / credentials & environment health check (Phase -1)
 - `/dev-create` — spec and file a brand-new ticket
 - `/dev-assess` — technical deep dive (Phase 0.5)
 - `/dev-pr` — create PR / handle review comments (Phases 7–8)
