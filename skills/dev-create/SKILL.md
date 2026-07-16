@@ -14,6 +14,31 @@ Turn this idea into a filed Jira ticket: **$ARGUMENTS**
 
 ---
 
+## Step 0 — Preconditions
+
+`dev-create` is a common **first entry point** into a fresh clone — a freeform idea routes here directly
+without going through `/dev`'s own precondition check first (Claude can match this skill straight from
+its description; Codex resolves it the same way via `agent-context.md`). Run the same cheap check `/dev`
+does before diving into a multi-step conversation that would otherwise fail deep in, at the Jira step:
+
+```bash
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+[ -f "$WS/config.sh" ] && { [ -f ~/.env.jira ] || [ -f ~/.jira/profiles.json ]; } && echo OK || echo MISSING
+```
+
+If `MISSING`: "Faltan prerequisitos antes de crear el ticket (config o credenciales de Jira). ¿Corro
+`/dev-setup` para revisar qué falta?" If confirmed, invoke `/dev-setup`, then resume with the original
+`$ARGUMENTS` once it reports OK. (`gh auth` isn't required here — this skill doesn't touch GitHub — so
+it's not part of this check, unlike `/dev`'s.)
+
 ## Role
 
 Same technical-advisor stance as `/dev`: challenge vague or questionable scope before drafting the
