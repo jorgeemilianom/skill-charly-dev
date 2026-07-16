@@ -10,7 +10,7 @@ Turn this idea into a filed Jira ticket: **$ARGUMENTS**
 
 `$ARGUMENTS` is a freeform description — there is no ticket ID yet, that's what this skill produces.
 
-> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`. If the user corrects an in-progress approach, capture it immediately — see "Capture Corrections as They Happen" in `dev/SKILL.md`.
 
 ---
 

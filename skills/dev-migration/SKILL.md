@@ -10,7 +10,7 @@ Run the migration workflow for: **$ARGUMENTS**
 
 `$ARGUMENTS` is the ticket ID (`msof-XXX`), used for the migration filename and commit message.
 
-> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`. If the user corrects an in-progress approach, capture it immediately — see "Capture Corrections as They Happen" in `dev/SKILL.md`.
 
 ---
 

@@ -12,7 +12,7 @@ Extract ticket ID (`msof-XXX`) from `$ARGUMENTS`.
 
 Can be invoked at any moment during the ticket lifecycle. Does not require the ticket to be finished.
 
-> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`. If the user corrects an in-progress approach, capture it immediately — see "Capture Corrections as They Happen" in `dev/SKILL.md`.
 
 ## Codex execution contract
 
@@ -326,14 +326,15 @@ print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 jq empty $WS/memory/patterns.json 2>/dev/null || echo '{"patterns":[]}' > $WS/memory/patterns.json
 
 jq --arg pattern "<detected pattern description>" \
-   --arg type "error|success" '
+   --arg type "error|success" \
+   --argjson tags '["<repo, or omit for a universal pattern>"]' '
   if any(.patterns[]; .pattern == $pattern)
   then .patterns |= map(
     if .pattern == $pattern
     then .frequency += 1 | .confidence = [(.confidence + 0.1), 0.95] | min
     else . end
   )
-  else .patterns += [{"pattern": $pattern, "type": $type, "frequency": 1, "confidence": 0.5}]
+  else .patterns += [{"pattern": $pattern, "type": $type, "frequency": 1, "confidence": 0.5, "tags": $tags}]
   end
 ' $WS/memory/patterns.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/patterns.json
 ```
@@ -370,7 +371,8 @@ jq --argjson entry '{
   "decision": "<short description>",
   "outcome": "success|partial|failure",
   "score": 0.0,
-  "timestamp": "<ISO 8601>"
+  "timestamp": "<ISO 8601>",
+  "tags": ["<repo, or omit for a universal decision>"]
 }' '.decisions += [$entry]' \
 $WS/memory/decisions.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/decisions.json
 ```
@@ -409,27 +411,59 @@ jq empty $WS/memory/mistakes.json 2>/dev/null || echo '{"mistakes":[]}' > $WS/me
 jq --argjson entry '{
   "ticket": "<TICKET_ID>",
   "description": "<description of the detected error>",
-  "context": "<code area or phase where it occurred>"
+  "context": "<code area or phase where it occurred>",
+  "tags": ["<repo, or omit for a universal process rule>"]
 }' '
   if any(.mistakes[]; .ticket == $entry.ticket and .description == $entry.description)
   then . else .mistakes += [$entry] end
 ' $WS/memory/mistakes.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/mistakes.json
 ```
 
-### 7.2 — Save new rules
+### 7.2 — Save new rules (with supersede-on-write dedup)
+
+Same write path as "Capture Corrections as They Happen" in `dev/SKILL.md` — read that section for the
+full dedup logic; summarized here for the closing-mode context:
 
 ```bash
 jq empty $WS/memory/global_rules.json 2>/dev/null || echo '{"rules":[]}' > $WS/memory/global_rules.json
+cat $WS/memory/global_rules.json
+```
 
-jq --argjson entry '{
-  "rule": "<rule text>",
-  "origin_ticket": "<TICKET_ID>",
-  "type": "avoid|prioritize|verify"
-}' '
-  if any(.rules[]; .rule == $entry.rule)
-  then . else .rules += [$entry] end
+Read the current `active` rules whose `tags` overlap the new rule's tags (or are universal/untagged).
+Judge whether the new rule is: **(a)** a near-duplicate/restatement of an existing active rule, **(b)**
+a correction/refinement that supersedes one, or **(c)** genuinely new. This is a judgment call — don't
+try to script the similarity check itself.
+
+**(a) Reinforcement** — bump the existing entry instead of duplicating:
+```bash
+jq --arg id "<existing-rule-id>" '
+  .rules |= map(if .id == $id then
+    .confidence = ([(.confidence + 0.1), 0.95] | min) | .reinforced_count = ((.reinforced_count // 0) + 1)
+  else . end)
 ' $WS/memory/global_rules.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/global_rules.json
 ```
+
+**(b) Supersede** — mark the old entry, then append the new one (id: next `<TICKET_ID>-r<n>` for this ticket):
+```bash
+jq --arg old_id "<existing-rule-id>" --arg new_id "<TICKET_ID>-r<n>" '
+  .rules |= map(if .id == $old_id then .status = "superseded" | .superseded_by = $new_id else . end)
+' $WS/memory/global_rules.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/global_rules.json
+
+jq --argjson entry '{
+  "id": "<TICKET_ID>-r<n>",
+  "rule": "<rule text>",
+  "origin_ticket": "<TICKET_ID>",
+  "type": "avoid|prioritize|verify",
+  "tags": ["<repo, or omit for a universal process rule>"],
+  "status": "active",
+  "confidence": 0.6,
+  "source": "retrospective"
+}' '.rules += [$entry]' \
+  $WS/memory/global_rules.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/global_rules.json
+```
+
+**(c) Genuinely new** — same append as (b) without the supersede step, `id` is `<TICKET_ID>-r1` for the
+first rule from this ticket (increment per additional rule in the same cycle).
 
 ### 7.3 — Save ticket learning
 

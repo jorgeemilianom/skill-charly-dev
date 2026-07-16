@@ -12,7 +12,7 @@ Run DB sync for: **$ARGUMENTS**
 
 `<project>` must be one of the repos listed in `DB_SYNC_REPOS` (`config.sh`). If omitted, ask which project.
 
-> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`. If the user corrects an in-progress approach, capture it immediately — see "Capture Corrections as They Happen" in `dev/SKILL.md`.
 
 ---
 

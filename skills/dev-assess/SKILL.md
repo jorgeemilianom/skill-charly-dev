@@ -14,7 +14,7 @@ This skill performs the full pre-development analysis before any code is written
 
 **Triggered by**: before starting development. Can also be invoked directly.
 
-> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`. If the user corrects an in-progress approach, capture it immediately — see "Capture Corrections as They Happen" in `dev/SKILL.md`.
 
 ---
 
@@ -44,19 +44,18 @@ for REPO in $REPOS; do
   git -C $WS/projects/$REPO fetch origin 2>/dev/null; git -C $WS/projects/$REPO branch -a | grep -i "<TICKET_ID>"
 done
 
-# 3 — Initialize and read memory/
+# 3 — Ensure memory/ files exist, upgrade legacy patterns entries
 mkdir -p $WS/memory/tickets $WS/memory/assessments
 [ -f $WS/memory/global_rules.json ] || echo '{"rules":[]}' > $WS/memory/global_rules.json
 [ -f $WS/memory/patterns.json ]     || echo '{"patterns":[]}' > $WS/memory/patterns.json
 jq empty $WS/memory/patterns.json 2>/dev/null || echo '{"patterns":[]}' > $WS/memory/patterns.json
-jq '.patterns |= map(. + {type: (.type // "success"), frequency: (.frequency // 1), confidence: (.confidence // 0.5)})' \
+jq '.patterns |= map(. + {type: (.type // "success"), frequency: (.frequency // 1), confidence: (.confidence // 0.5), tags: (.tags // [])})' \
   $WS/memory/patterns.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/patterns.json
 [ -f $WS/memory/decisions.json ] || echo '{"decisions":[]}' > $WS/memory/decisions.json
 [ -f $WS/memory/mistakes.json ]  || echo '{"mistakes":[]}' > $WS/memory/mistakes.json
 [ -f $WS/memory/tickets/<TICKET_ID>.json ] || echo '{"summary":"","decisions":[],"learnings":[]}' > $WS/memory/tickets/<TICKET_ID>.json
 [ -f $WS/memory/assessments/<TICKET_ID>.json ] && cat $WS/memory/assessments/<TICKET_ID>.json
-cat $WS/memory/global_rules.json $WS/memory/patterns.json $WS/memory/decisions.json \
-    $WS/memory/mistakes.json $WS/memory/tickets/<TICKET_ID>.json
+cat $WS/memory/tickets/<TICKET_ID>.json
 
 # 4 — Extract epic key from ticket JSON (run in parallel)
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json 2>/dev/null | python3 -c "
@@ -67,20 +66,58 @@ print(epic or '')
 " 2>/dev/null
 ```
 
+**Detect affected repos now** (from the ticket title/description fetched in #1), using the keyword
+table in Section A.1 below — do this as soon as the ticket JSON is available, don't wait for Section A.
+This same detection is reused as-is when execution reaches Section A.1 later; no need to redo it.
+
+**Filtered memory read** — once repos are detected, read `memory/` filtered to what's actually relevant
+instead of dumping everything (unfiltered dumps get noisy and expensive as `memory/` grows — see
+`memory/global_rules.json`'s `tags` field). Entries with no `tags` (or an empty array) are universal
+process/git rules and always included regardless of detected repo:
+
+```bash
+# Replace TAGS with the space-separated repos detected above, e.g. TAGS='CloudHubCorp'
+TAGS='<detected-repo-1> <detected-repo-2>'
+TAG_FILTER=$(printf '%s\n' $TAGS | jq -R . | jq -s '.')
+
+jq --argjson tags "$TAG_FILTER" \
+  '[.rules[] | select(.status == "active") | select((.tags // []) == [] or ([.tags[]? | IN($tags[])] | any))]' \
+  $WS/memory/global_rules.json
+
+jq --argjson tags "$TAG_FILTER" \
+  '[.patterns[] | select((.tags // []) == [] or ([.tags[]? | IN($tags[])] | any))]' \
+  $WS/memory/patterns.json
+
+jq --argjson tags "$TAG_FILTER" \
+  '[.decisions[] | select((.tags // []) == [] or ([.tags[]? | IN($tags[])] | any))]' \
+  $WS/memory/decisions.json
+
+jq --argjson tags "$TAG_FILTER" \
+  '[.mistakes[] | select((.tags // []) == [] or ([.tags[]? | IN($tags[])] | any))]' \
+  $WS/memory/mistakes.json
+```
+
 Once all complete, determine:
 - **Branch exists in any repo** → resumed branch. Skip sections E, F, A, B. Go to Section G.
 - **No branch found** → fresh start. Continue below.
 
 ---
 
-## Section E — Historical Context (passive, from Step 0)
+## Section E — Historical Context (passive, from the filtered read above)
 
-Extract from `memory/` files loaded in Step 0:
+Extract from the filtered `memory/` results from Step 0 (already scoped to detected repos + universal
+rules — no need to re-filter or second-guess relevance, that filtering already happened):
 
 1. **`memory/`** (primary): decisions, mistakes, patterns, global rules, ticket history.
 2. **`~/.claude/projects/`** (secondary): style preferences and authorization rules.
 
-Feed findings into the **Memory context** section of the Technical Assessment. Cite origin ticket when relevant: `"En MSOF-XXX se adoptó el mismo patrón y funcionó / falló porque [razón]"`. If nothing is applicable, continue silently.
+Feed findings into the **Memory context** section of the Technical Assessment, grouped by confidence
+(rules only — `patterns`/`decisions` don't carry a directive confidence, present them as-is):
+- **`confidence ≥ 0.8`** → present as the default approach to take unless the user says otherwise.
+- **`0.5 ≤ confidence < 0.8`** → present as a consideration/suggestion, not a default.
+- **`confidence < 0.4`** → omit entirely, too weak a signal to surface.
+
+Cite origin ticket when relevant: `"En MSOF-XXX se adoptó el mismo patrón y funcionó / falló porque [razón]"`. If nothing is applicable after filtering, continue silently.
 
 ---
 
@@ -119,7 +156,8 @@ Cross-reference against Section B findings.
 
 ### A.1 — Detect affected repos
 
-Read the ticket title and description. Map keywords to repos:
+Already done in Step 0 (needed there to filter the memory read) — reuse that result, don't redetect.
+For reference, the table used:
 
 > **CUSTOMIZE** — Replace the table below with your project's repos and their associated keywords.
 
@@ -236,9 +274,10 @@ Surface cross-project impact if found.
   - [repo-1]: [layers / areas affected]
   - [repo-2]: [layers / areas affected]
   - [repo-N]: [layers / areas affected — one line per affected repo]
-**Memory context**:
+**Memory context** (reglas con `confidence < 0.4` ya fueron excluidas en la lectura filtrada):
   - 🔴 Errores previos aplicables: (omitir si no hay)
-  - 🟢 Patrones detectados: (omitir si no hay)
+  - ⭐ Reglas de alta confianza (≥0.8) — aplicar por defecto: (omitir si no hay)
+  - 🟢 Patrones / reglas a considerar (0.5–0.79): (omitir si no hay)
   - 📋 Decisiones previas con score: (omitir si no hay)
 **Epic context** (omitir si no hay overlap):
   - 🔵 En curso / ✅ Recientes / 🔜 Próximos
