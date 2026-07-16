@@ -278,6 +278,24 @@ If found, report without justification:
 
 Identify friction or inefficiencies observed during this cycle. Present as a concise observation, not an exhaustive list. Skip if nothing is relevant.
 
+### 3d — Script-worthy procedures?
+
+This is the retrospective safety net for "Build the Project Toolbox as You Go" (every skill points to
+this convention live, but noticing mid-task is easy to skip under time pressure — check again here).
+
+Review this cycle's actual commands: was any multi-step shell/git/gh/jq procedure repeated 2+ times, or
+did any single pipeline take several iterations to get right (a `jq` filter, a `grep`/`git log`
+combination, a multi-flag `gh` invocation)? Check it's not already covered:
+
+```bash
+cat scripts/local/MANIFEST.json 2>/dev/null
+```
+
+If a genuine candidate exists and isn't already registered, externalize it now — write the script to
+`scripts/local/<name>.sh` (or `.py` with PEP 723 inline deps), `chmod +x`, register it in
+`scripts/local/MANIFEST.json` — following `dev/references/local-scripting.md` exactly. Skip silently if
+nothing from this cycle meets the bar (deterministic, took real effort, no embedded secrets/ticket IDs).
+
 ---
 
 ## Step 4 — Pattern Detection (closing mode only)
