@@ -38,6 +38,58 @@ the full convention (when to script, how to register it, naming).
 
 ---
 
+## Capture Corrections as They Happen
+
+This applies across `/dev` and every sibling skill, same as the toolbox convention above — it's a local,
+reversible write, so it doesn't need user confirmation (matches `agent-context.md`'s "local writes...
+do not require confirmation").
+
+When the user directly corrects an in-progress approach ("no, hacelo así", "eso no, mejor..."), that's
+the strongest possible learning signal — stronger than anything reconstructed retrospectively at
+`/dev-reflect` closing, because it's a direct, explicit statement instead of an inference. Capture it
+immediately, don't wait for closing:
+
+```bash
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+jq empty $WS/memory/global_rules.json 2>/dev/null || echo '{"rules":[]}' > $WS/memory/global_rules.json
+cat $WS/memory/global_rules.json
+```
+
+Same dedup logic as `dev-reflect` Step 7.2 applies here — read the current `active` rules whose `tags`
+overlap the current repo(s)/topic (or are universal), and judge: **reinforcement** (bump `confidence`
++`reinforced_count` on the existing entry), **supersede** (mark the old entry `status: "superseded"`
++`superseded_by`, append the new one), or **genuinely new** (just append). The only difference from the
+closing-mode write: `confidence` starts at **`0.9`** (not `0.6`) and `source` is `"live_correction"` (not
+`"retrospective"`) — a direct correction deserves more weight than a retrospective inference from the
+first mention.
+
+```bash
+jq --argjson entry '{
+  "id": "<TICKET_ID>-r<n>",
+  "rule": "<rule text derived from the correction>",
+  "origin_ticket": "<TICKET_ID>",
+  "type": "avoid|prioritize|verify",
+  "tags": ["<repo, or omit for a universal process rule>"],
+  "status": "active",
+  "confidence": 0.9,
+  "source": "live_correction"
+}' '.rules += [$entry]' \
+  $WS/memory/global_rules.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/global_rules.json
+```
+
+One line, no ceremony: *"Guardé esto como regla en memoria para no repetirlo."* — same tone as the local
+scripting convention's confirmation line.
+
+---
+
 ## Phase -1: Preconditions
 
 Run before anything else, every invocation — cheap, no prompts:

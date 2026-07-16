@@ -38,11 +38,14 @@ Files the `/dev-*` skills read and write:
 - `memory/vps-config.json` — production VPS connection settings for `/dev-db-sync`.
 - `memory/review_rounds/<TICKET>.json` — PR review history written by `/dev-pr`.
 - `memory/db-backups/` — downloaded DB snapshots from `/dev-db-sync`.
-- `memory/patterns.json`, `memory/decisions.json`, `memory/mistakes.json`, `memory/global_rules.json` — cross-ticket learnings written by `/dev-reflect`.
+- `memory/patterns.json`, `memory/decisions.json`, `memory/mistakes.json`, `memory/global_rules.json` — cross-ticket learnings written by `/dev-reflect`, retrieved by `/dev-assess` **filtered** by `tags` (repo names + keywords; empty `tags` = universal, always included) so a growing memory doesn't dump irrelevant history into every ticket. `global_rules.json` entries also carry `status` (`active`/`superseded`), `confidence` (`≥0.8` = apply by default, `<0.4` = omit), and `source` (`live_correction` = captured directly from a user correction, confidence `0.9`; `retrospective` = inferred at `/dev-reflect` closing, confidence `0.6`).
 
 Memory writes are part of the shared workflow — both agents may update `memory/` files directly as
-local memory persistence. Ask before Jira transitions or Jira comments unless the user explicitly
-requested the flow that includes them (e.g. `/dev-reflect` closing mode, `/dev-assess`).
+local memory persistence, including capturing a live correction into `global_rules.json` the moment the
+user corrects an in-progress approach (see "Capture Corrections as They Happen" in `skills/dev/SKILL.md`
+— don't wait for `/dev-reflect` to reconstruct it retrospectively). Ask before Jira transitions or Jira
+comments unless the user explicitly requested the flow that includes them (e.g. `/dev-reflect` closing
+mode, `/dev-assess`).
 
 Imported Claude project memory index (legacy — prefer `memory/` for new learnings unless the user
 explicitly asks to update Claude memory): see `CLAUDE_MEMORY_INDEX` in `config.sh`.
