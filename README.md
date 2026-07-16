@@ -126,10 +126,34 @@ read for a given request.
 
 ---
 
+## Self-hosted usage
+
+`install.sh` only needs a `CLAUDE.md` somewhere at or above `$PWD` — it doesn't care whether that's a
+separate project or this repo's own root. If you don't need to share the skill definitions with anyone
+else, you can skip having a separate template clone + target project and just run `install.sh` from
+inside this repo itself: put your `CLAUDE.md` at the repo root and your project checkouts under
+`projects/`. Everything generated (`.ai/`, `.claude/`, `AGENTS.md`, `projects/`) is gitignored, so this
+stays safe to keep in a public repo — only `skills/`, `scripts/`, `templates/`, `install.sh`,
+`config.example.sh` and your own `CLAUDE.md` are tracked.
+
+```
+skill-charly-dev/            (== your workspace, one folder, one repo)
+├── skills/ scripts/ templates/ install.sh   ← tracked, public
+├── CLAUDE.md                                ← tracked (your project map, no secrets)
+├── config.sh                                ← gitignored (credentials)
+├── .ai/  .claude/  AGENTS.md                ← gitignored (generated + your real memory data)
+└── projects/                                ← gitignored (your actual repo checkouts)
+    ├── your-api/
+    └── your-frontend/
+```
+
+---
+
 ## Quick start
 
 ```bash
-# 1. clone the skill repo anywhere (it's a template, not your project)
+# 1. clone the skill repo anywhere (it's a template, not your project —
+#    unless you're doing the self-hosted setup above, in which case this clone IS your project)
 git clone https://github.com/jorgeemilianom/skill-charly-dev.git ~/skills/charly-dev
 cd ~/skills/charly-dev
 
