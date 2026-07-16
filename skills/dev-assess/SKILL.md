@@ -1,6 +1,6 @@
 ---
 name: dev-assess
-description: "Technical deep dive before writing any code. Reads Jira, detects affected repos, explores the codebase with architecture-aware heuristics, loads .ai/memory context, produces a Technical Assessment, and — after one user confirmation — enriches the Jira ticket with structured documentation and transitions it to In Progress. Delegated to by /dev before development starts."
+description: "Technical deep dive before writing any code. Reads Jira, detects affected repos, explores the codebase with architecture-aware heuristics, loads memory/ context, produces a Technical Assessment, and — after one user confirmation — enriches the Jira ticket with structured documentation and transitions it to In Progress. Delegated to by /dev before development starts."
 allowed-tools: Bash Read Write
 ---
 
@@ -14,7 +14,7 @@ This skill performs the full pre-development analysis before any code is written
 
 **Triggered by**: before starting development. Can also be invoked directly.
 
-> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
 
 ---
 
@@ -23,7 +23,6 @@ This skill performs the full pre-development analysis before any code is written
 Run all of the following **simultaneously** before doing anything else.
 
 ```bash
-JIRA_SKILL=${JIRA_SCRIPTS}
 WS=$(python3 -c "
 import os, subprocess
 try:
@@ -33,28 +32,31 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
+source "$WS/config.sh"
+JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+PROJECTS_PREFIX="${PROJECTS_SUBDIR:+$PROJECTS_SUBDIR/}"
 
 # 1 — Read ticket from Jira
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
 
 # 2 — Check branch state across all sub-repos
-for REPO in ${REPOS}; do
-  git -C $WS/${PROJECTS_PREFIX}$REPO fetch origin 2>/dev/null; git -C $WS/${PROJECTS_PREFIX}$REPO branch -a | grep -i "<TICKET_ID>"
+for REPO in $REPOS; do
+  git -C $WS/projects/$REPO fetch origin 2>/dev/null; git -C $WS/projects/$REPO branch -a | grep -i "<TICKET_ID>"
 done
 
-# 3 — Initialize and read .ai/memory/
-mkdir -p $WS/.ai/memory/tickets $WS/.ai/memory/assessments
-[ -f $WS/.ai/memory/global_rules.json ] || echo '{"rules":[]}' > $WS/.ai/memory/global_rules.json
-[ -f $WS/.ai/memory/patterns.json ]     || echo '{"patterns":[]}' > $WS/.ai/memory/patterns.json
-jq empty $WS/.ai/memory/patterns.json 2>/dev/null || echo '{"patterns":[]}' > $WS/.ai/memory/patterns.json
+# 3 — Initialize and read memory/
+mkdir -p $WS/memory/tickets $WS/memory/assessments
+[ -f $WS/memory/global_rules.json ] || echo '{"rules":[]}' > $WS/memory/global_rules.json
+[ -f $WS/memory/patterns.json ]     || echo '{"patterns":[]}' > $WS/memory/patterns.json
+jq empty $WS/memory/patterns.json 2>/dev/null || echo '{"patterns":[]}' > $WS/memory/patterns.json
 jq '.patterns |= map(. + {type: (.type // "success"), frequency: (.frequency // 1), confidence: (.confidence // 0.5)})' \
-  $WS/.ai/memory/patterns.json > $WS/.ai/memory/tmp.json && mv $WS/.ai/memory/tmp.json $WS/.ai/memory/patterns.json
-[ -f $WS/.ai/memory/decisions.json ] || echo '{"decisions":[]}' > $WS/.ai/memory/decisions.json
-[ -f $WS/.ai/memory/mistakes.json ]  || echo '{"mistakes":[]}' > $WS/.ai/memory/mistakes.json
-[ -f $WS/.ai/memory/tickets/<TICKET_ID>.json ] || echo '{"summary":"","decisions":[],"learnings":[]}' > $WS/.ai/memory/tickets/<TICKET_ID>.json
-[ -f $WS/.ai/memory/assessments/<TICKET_ID>.json ] && cat $WS/.ai/memory/assessments/<TICKET_ID>.json
-cat $WS/.ai/memory/global_rules.json $WS/.ai/memory/patterns.json $WS/.ai/memory/decisions.json \
-    $WS/.ai/memory/mistakes.json $WS/.ai/memory/tickets/<TICKET_ID>.json
+  $WS/memory/patterns.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/patterns.json
+[ -f $WS/memory/decisions.json ] || echo '{"decisions":[]}' > $WS/memory/decisions.json
+[ -f $WS/memory/mistakes.json ]  || echo '{"mistakes":[]}' > $WS/memory/mistakes.json
+[ -f $WS/memory/tickets/<TICKET_ID>.json ] || echo '{"summary":"","decisions":[],"learnings":[]}' > $WS/memory/tickets/<TICKET_ID>.json
+[ -f $WS/memory/assessments/<TICKET_ID>.json ] && cat $WS/memory/assessments/<TICKET_ID>.json
+cat $WS/memory/global_rules.json $WS/memory/patterns.json $WS/memory/decisions.json \
+    $WS/memory/mistakes.json $WS/memory/tickets/<TICKET_ID>.json
 
 # 4 — Extract epic key from ticket JSON (run in parallel)
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json 2>/dev/null | python3 -c "
@@ -73,9 +75,9 @@ Once all complete, determine:
 
 ## Section E — Historical Context (passive, from Step 0)
 
-Extract from `.ai/memory/` files loaded in Step 0:
+Extract from `memory/` files loaded in Step 0:
 
-1. **`.ai/memory/`** (primary): decisions, mistakes, patterns, global rules, ticket history.
+1. **`memory/`** (primary): decisions, mistakes, patterns, global rules, ticket history.
 2. **`~/.claude/projects/`** (secondary): style preferences and authorization rules.
 
 Feed findings into the **Memory context** section of the Technical Assessment. Cite origin ticket when relevant: `"En PROJ-XXX se adoptó el mismo patrón y funcionó / falló porque [razón]"`. If nothing is applicable, continue silently.
@@ -87,9 +89,19 @@ Feed findings into the **Memory context** section of the Technical Assessment. C
 Use the epic key extracted in Step 0. If no epic, skip silently.
 
 ```bash
-JIRA_SKILL=${JIRA_SCRIPTS}
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+source "$WS/config.sh"
+JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
 uv run $JIRA_SKILL/core/jira-search.py query \
-  "project = ${PROJECT_KEY} AND parent = <EPIC_KEY> ORDER BY status, priority" \
+  "project = $PROJECT_KEY AND parent = <EPIC_KEY> ORDER BY status, priority" \
   --max-results 50 --json
 ```
 
@@ -125,17 +137,25 @@ If ambiguous or the ticket mentions multiple areas → mark all relevant repos a
 
 **For backend-api** (if affected):
 ```bash
-WS=<workspace_root>
-cat $WS/${PROJECTS_PREFIX}backend-api/CLAUDE.md
-cat $WS/${PROJECTS_PREFIX}backend-api/Makefile
-ls $WS/${PROJECTS_PREFIX}backend-api/internal/core/domain/
-ls $WS/${PROJECTS_PREFIX}backend-api/internal/core/ports/repositories/
-ls $WS/${PROJECTS_PREFIX}backend-api/internal/core/ports/services/
-ls $WS/${PROJECTS_PREFIX}backend-api/internal/core/services/
-ls $WS/${PROJECTS_PREFIX}backend-api/internal/adapters/primary/http/handlers/
-ls $WS/${PROJECTS_PREFIX}backend-api/internal/adapters/secondary/mysql/
-ls $WS/${PROJECTS_PREFIX}backend-api/specs/features/ 2>/dev/null
-cat $WS/${PROJECTS_PREFIX}backend-api/spec_openapi/openapi.yaml 2>/dev/null | head -80
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+cat $WS/projects/backend-api/CLAUDE.md
+cat $WS/projects/backend-api/Makefile
+ls $WS/projects/backend-api/internal/core/domain/
+ls $WS/projects/backend-api/internal/core/ports/repositories/
+ls $WS/projects/backend-api/internal/core/ports/services/
+ls $WS/projects/backend-api/internal/core/services/
+ls $WS/projects/backend-api/internal/adapters/primary/http/handlers/
+ls $WS/projects/backend-api/internal/adapters/secondary/mysql/
+ls $WS/projects/backend-api/specs/features/ 2>/dev/null
+cat $WS/projects/backend-api/spec_openapi/openapi.yaml 2>/dev/null | head -80
 ```
 Architecture layers (dependencies flow inward): Adapters → Ports → Domain.
 Coverage gate: 80% minimum on `./internal/core/...` and `./internal/adapters/primary/...`.
@@ -143,22 +163,22 @@ New domain errors: define in `errors.go`, add case in `mapError()`.
 
 **For frontend-app** (if affected):
 ```bash
-cat $WS/${PROJECTS_PREFIX}frontend-app/CLAUDE.md
-ls $WS/${PROJECTS_PREFIX}frontend-app/src/features/
-ls $WS/${PROJECTS_PREFIX}frontend-app/src/services/
-ls $WS/${PROJECTS_PREFIX}frontend-app/src/components/
-ls $WS/${PROJECTS_PREFIX}frontend-app/src/pages/ 2>/dev/null
+cat $WS/projects/frontend-app/CLAUDE.md
+ls $WS/projects/frontend-app/src/features/
+ls $WS/projects/frontend-app/src/services/
+ls $WS/projects/frontend-app/src/components/
+ls $WS/projects/frontend-app/src/pages/ 2>/dev/null
 ```
 All API calls go through `src/services/apiClient.js` — never fetch directly from components.
 Every new component needs a `.test.jsx` file alongside it.
 
 **For internal-platform** (if affected):
 ```bash
-cat $WS/${PROJECTS_PREFIX}internal-platform/CLAUDE.md
-cat $WS/${PROJECTS_PREFIX}internal-platform/Makefile
-ls $WS/${PROJECTS_PREFIX}internal-platform/src/ 2>/dev/null
-ls $WS/${PROJECTS_PREFIX}internal-platform/api/ 2>/dev/null
-ls $WS/${PROJECTS_PREFIX}internal-platform/admin/src/ 2>/dev/null
+cat $WS/projects/internal-platform/CLAUDE.md
+cat $WS/projects/internal-platform/Makefile
+ls $WS/projects/internal-platform/src/ 2>/dev/null
+ls $WS/projects/internal-platform/api/ 2>/dev/null
+ls $WS/projects/internal-platform/admin/src/ 2>/dev/null
 ```
 Critical rules: always scope SQL with `business_id`; never use PUT/DELETE; always run `make build` after Backoffice changes; branch flow is `feature/*` → `develop` → `master` (never push direct to master).
 
@@ -172,31 +192,31 @@ For each affected repo, run grep and git log in parallel. Use keywords from the 
 
 **backend-api:**
 ```bash
-grep -r "<keyword>" $WS/${PROJECTS_PREFIX}backend-api/internal/ --include="*.go" -l
-git -C $WS/${PROJECTS_PREFIX}backend-api log --oneline --all --grep="<keyword>"
+grep -r "<keyword>" $WS/projects/backend-api/internal/ --include="*.go" -l
+git -C $WS/projects/backend-api log --oneline --all --grep="<keyword>"
 ```
 Then read: handler → use case interface (port) → service implementation → repository interface → MySQL implementation → tests.
 
 **frontend-app:**
 ```bash
-grep -r "<keyword>" $WS/${PROJECTS_PREFIX}frontend-app/src/ --include="*.jsx" --include="*.js" -l
-git -C $WS/${PROJECTS_PREFIX}frontend-app log --oneline --all --grep="<keyword>"
+grep -r "<keyword>" $WS/projects/frontend-app/src/ --include="*.jsx" --include="*.js" -l
+git -C $WS/projects/frontend-app log --oneline --all --grep="<keyword>"
 ```
 Then read: feature component → hook → service call in apiClient.
 
 **internal-platform:**
 ```bash
-grep -r "<keyword>" $WS/${PROJECTS_PREFIX}internal-platform/src/ --include="*.php" -l
-grep -r "<keyword>" $WS/${PROJECTS_PREFIX}internal-platform/admin/src/ --include="*.jsx" --include="*.astro" -l 2>/dev/null
-git -C $WS/${PROJECTS_PREFIX}internal-platform log --oneline --all --grep="<keyword>"
+grep -r "<keyword>" $WS/projects/internal-platform/src/ --include="*.php" -l
+grep -r "<keyword>" $WS/projects/internal-platform/admin/src/ --include="*.jsx" --include="*.astro" -l 2>/dev/null
+git -C $WS/projects/internal-platform log --oneline --all --grep="<keyword>"
 ```
 Always check `business_id` scope when reading any DB query. Flag if missing.
 
 **Cross-project check** (always):
 ```bash
 # If Api endpoint changes → check Frontend calls the same path
-grep -r "<endpoint_path>" $WS/${PROJECTS_PREFIX}frontend-app/src/services/ 2>/dev/null
-grep -r "<endpoint_path>" $WS/${PROJECTS_PREFIX}internal-platform/ 2>/dev/null
+grep -r "<endpoint_path>" $WS/projects/frontend-app/src/services/ 2>/dev/null
+grep -r "<endpoint_path>" $WS/projects/internal-platform/ 2>/dev/null
 ```
 
 Surface cross-project impact if found.
@@ -325,7 +345,17 @@ _Generado por /dev-assess — <ISO date>_
 
 Post it:
 ```bash
-JIRA_SKILL=${JIRA_SCRIPTS}
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+source "$WS/config.sh"
+JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
 uv run $JIRA_SKILL/workflow/jira-comment.py add "<TICKET_ID>" "<comment text>"
 ```
 
@@ -334,7 +364,17 @@ uv run $JIRA_SKILL/workflow/jira-comment.py add "<TICKET_ID>" "<comment text>"
 Check ticket description length from Step 0 JSON output. If thin, add labels to flag it and update with a structured description:
 
 ```bash
-JIRA_SKILL=${JIRA_SCRIPTS}
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+source "$WS/config.sh"
+JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
 
 # Add label to signal the ticket has been technically assessed
 uv run $JIRA_SKILL/core/jira-issue.py update "<TICKET_ID>" --labels "assessed"
@@ -362,7 +402,17 @@ Notas técnicas: ver comentario de análisis técnico.
 ### H.3 — Transition to In Progress (if fresh start and user confirmed)
 
 ```bash
-JIRA_SKILL=${JIRA_SCRIPTS}
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+source "$WS/config.sh"
+JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
 uv run $JIRA_SKILL/workflow/jira-transition.py do "<TICKET_ID>" "In Progress"
 ```
 
@@ -376,7 +426,7 @@ For branches with existing commits, skip sections E–B and present a concise re
 
 - Is the current implementation still the right approach?
 - Any new concerns from reading existing code?
-- Check if a saved assessment exists in `.ai/memory/assessments/<TICKET_ID>.json` and use it as base.
+- Check if a saved assessment exists in `memory/assessments/<TICKET_ID>.json` and use it as base.
 - Present condensed assessment and wait for confirmation.
 
 If Jira documentation was never generated for this ticket (no `assessed` label), offer to generate it now.
@@ -413,7 +463,7 @@ def workspace_root():
     return p if os.path.exists(os.path.join(p, 'CLAUDE.md')) else g
 
 WS = workspace_root()
-os.makedirs(f'{WS}/.ai/memory/assessments', exist_ok=True)
+os.makedirs(f'{WS}/memory/assessments', exist_ok=True)
 
 assessment = {
     'ticket_id': '<TICKET_ID>',
@@ -433,7 +483,7 @@ assessment = {
     'memory_context_used': '<patterns/mistakes that influenced approach — brief or null>'
 }
 
-with open(f'{WS}/.ai/memory/assessments/<TICKET_ID>.json', 'w') as f:
+with open(f'{WS}/memory/assessments/<TICKET_ID>.json', 'w') as f:
     json.dump(assessment, f, indent=2)
 ```
 

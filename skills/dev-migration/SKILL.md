@@ -10,22 +10,22 @@ Run the migration workflow for: **$ARGUMENTS**
 
 `$ARGUMENTS` is the ticket ID (`proj-XXX`), used for the migration filename and commit message.
 
-> Before improvising a multi-step procedure, check `.ai/vendor/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
+> Before improvising a multi-step procedure, check `scripts/local/MANIFEST.json` — see `dev/references/local-scripting.md`.
 
 ---
 
 ## Step 1 — Check pending migrations
 
 ```bash
-make -C ${PROJECTS_PREFIX}backend-api migrate-check 2>/dev/null || \
-  make -C ${PROJECTS_PREFIX}backend-api migrate-status 2>/dev/null
+make -C projects/backend-api migrate-check 2>/dev/null || \
+  make -C projects/backend-api migrate-status 2>/dev/null
 ```
 
 ## Step 2 — Create migration file (if adding a new one)
 
 ```bash
 # Asks for migration name interactively
-make -C ${PROJECTS_PREFIX}backend-api migrate-create
+make -C projects/backend-api migrate-create
 ```
 Name format: `<short_description>_<TICKET_ID_LOWERCASE>` (e.g. `add_reviews_table_proj42`)
 
@@ -44,13 +44,13 @@ Write both up and down scripts in the generated files.
 > "Voy a correr `make migrate-up` en backend-api. ¿Confirmás? (requiere DB_* env vars)"
 
 ```bash
-make -C ${PROJECTS_PREFIX}backend-api migrate-up
+make -C projects/backend-api migrate-up
 ```
 
 ## Step 6 — Verify and commit
 
 ```bash
-make -C ${PROJECTS_PREFIX}backend-api test
-git add ${PROJECTS_PREFIX}backend-api/migrations/
+make -C projects/backend-api test
+git add projects/backend-api/migrations/
 git commit -m "<TICKET_ID> | add migration <migration_name>"
 ```
