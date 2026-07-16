@@ -75,16 +75,33 @@ routes everything else to these siblings:
 
 | Skill | What it does |
 |-------|--------------|
-| [`/dev`](dev/SKILL.md) | Orchestrator. Full core loop for a ticket ID; routes freeform ideas, PR URLs, and subcommands to the skills below. |
-| [`/dev-create`](dev-create/SKILL.md) | Turns a freeform idea into a filed Jira ticket — drafts the spec with you, resolves the epic from a cached list. |
-| [`/dev-assess`](dev-assess/SKILL.md) | Technical deep dive before writing any code. Produces a structured assessment with confidence score and waits for your go-ahead. |
-| [`/dev-pr`](dev-pr/SKILL.md) | Creates the PR or handles incoming review comments. Builds the body, posts to Jira, runs automated review. |
-| [`/dev-reflect`](dev-reflect/SKILL.md) | Saves a snapshot at any point (checkpoint) or runs a full closing reflection when the PR merges. Feeds learnings back into memory. |
-| [`/dev-resume`](dev-resume/SKILL.md) | Reconstructs full context for a ticket already in progress, with a standup blurb. |
-| [`/dev-review`](dev-review/SKILL.md) | Reviews a teammate's PR against your architecture and conventions. |
-| [`/dev-migration`](dev-migration/SKILL.md) | DB migration workflow (check pending, create, review, run, commit). |
-| [`/dev-status`](dev-status/SKILL.md) | Read-only ticket or workspace-wide state — no side effects. |
-| [`/dev-db-sync`](dev-db-sync/SKILL.md) | Pulls a production DB snapshot over SSH for local development. |
+| [`/dev`](skills/dev/SKILL.md) | Orchestrator. Full core loop for a ticket ID; routes freeform ideas, PR URLs, and subcommands to the skills below. |
+| [`/dev-create`](skills/dev-create/SKILL.md) | Turns a freeform idea into a filed Jira ticket — drafts the spec with you, resolves the epic from a cached list. |
+| [`/dev-assess`](skills/dev-assess/SKILL.md) | Technical deep dive before writing any code. Produces a structured assessment with confidence score and waits for your go-ahead. |
+| [`/dev-pr`](skills/dev-pr/SKILL.md) | Creates the PR or handles incoming review comments. Builds the body, posts to Jira, runs automated review. |
+| [`/dev-reflect`](skills/dev-reflect/SKILL.md) | Saves a snapshot at any point (checkpoint) or runs a full closing reflection when the PR merges. Feeds learnings back into memory. |
+| [`/dev-resume`](skills/dev-resume/SKILL.md) | Reconstructs full context for a ticket already in progress, with a standup blurb. |
+| [`/dev-review`](skills/dev-review/SKILL.md) | Reviews a teammate's PR against your architecture and conventions. |
+| [`/dev-migration`](skills/dev-migration/SKILL.md) | DB migration workflow (check pending, create, review, run, commit). |
+| [`/dev-status`](skills/dev-status/SKILL.md) | Read-only ticket or workspace-wide state — no side effects. |
+| [`/dev-db-sync`](skills/dev-db-sync/SKILL.md) | Pulls a production DB snapshot over SSH for local development. |
+
+---
+
+## Repo layout
+
+```
+skill-charly-dev/
+├── skills/<name>/SKILL.md       # the 10 skills (source of truth)
+├── scripts/jira-communication/  # vendored third-party Jira CLI (see NOTICE.md)
+├── templates/                   # AGENTS.md.template, agent-context.md.template
+├── config.example.sh            # copy to config.sh and fill in your values
+├── config.sh                    # gitignored, your actual values
+└── install.sh                   # generates + installs into a target project
+```
+
+`install.sh` reads `skills/` and `templates/` and writes the generated output into
+`<project>/.ai/` — see the next section for what that looks like on the installed side.
 
 ---
 
@@ -176,7 +193,7 @@ cp config.example.sh config.sh
 | `DB_SYNC_REPOS` | Repos supporting `/dev-db-sync` — leave empty to disable | `backend-api` |
 | `CLAUDE_MEMORY_INDEX` | Path to this project's Claude auto-memory `MEMORY.md`, surfaced to Codex as a legacy fallback | `~/.claude/projects/<escaped-path>/memory/MEMORY.md` |
 
-The skills also contain **architecture rules** and **keyword-to-repo mappings** tailored as examples — look for `> CUSTOMIZE` comments in `dev-review/SKILL.md` and `dev-assess/SKILL.md` and replace them with your stack's conventions.
+The skills also contain **architecture rules** and **keyword-to-repo mappings** tailored as examples — look for `> CUSTOMIZE` comments in `skills/dev-review/SKILL.md` and `skills/dev-assess/SKILL.md` and replace them with your stack's conventions.
 
 After editing config or skill templates, regenerate from inside your project:
 

@@ -5,7 +5,7 @@
 
 # ── Jira ─────────────────────────────────────
 # Path to the jira-communication scripts directory.
-# Leave empty to use the copy vendored in this repo (vendor/jira-communication) —
+# Leave empty to use the copy vendored in this repo (scripts/jira-communication) —
 # install.sh copies it into your project automatically. Only set this to point
 # at your own separate jira-communication installation instead.
 export JIRA_SCRIPTS=""
