@@ -85,14 +85,19 @@ resolution path: when the user's intent matches one of the rows below, read the 
 | Pull a production DB snapshot | `skills/dev-db-sync/SKILL.md` |
 | Bootstrap a new client's `Business/<cliente>/` | `skills/manager-create/SKILL.md` |
 | Refresh/maintain an existing client's `Business/<cliente>/` | `skills/manager-update/SKILL.md` |
-| List known clients / route to the two above | `skills/manager/SKILL.md` |
+| Read-only client status/catch-up digest, proposals | `skills/manager-status/SKILL.md` |
+| Execute a task on a client's remote infra (SSH/VPS), no local repo | `skills/manager-exec/SKILL.md` |
+| Talk through a client requirement / list known clients / route to any of the above | `skills/manager/SKILL.md` |
 
 `skills/dev/SKILL.md` is the orchestrator: when a request doesn't clearly match one of the other
 rows, start there — it routes to the rest via its own dispatch table (including a precondition check
 that routes to `skills/dev-setup/SKILL.md` when credentials/config are missing).
 
-`skills/manager/SKILL.md` is a separate orchestrator for business-layer requests only — it never
-touches code, branches, Jira, or PRs. `skills/dev-assess/SKILL.md` delegates to
+`skills/manager/SKILL.md` is a separate orchestrator for business-layer requests — it never creates or
+edits code, Jira tickets, or PRs itself, but its Phase 2 (requirement intake) can delegate a client
+requirement outward: to `skills/dev/SKILL.md` (which routes to `dev-create` to file the ticket) when it
+needs local development, or to `skills/manager-exec/SKILL.md` when it needs execution on a client's own
+remote infrastructure instead of a repo under `projects/`. `skills/dev-assess/SKILL.md` delegates to
 `skills/manager-create/SKILL.md` automatically the first time it meets a repo with no client
 association under `Business/`.
 
@@ -112,10 +117,26 @@ convention: `skills/dev/references/local-scripting.md`.
 - When one skill delegates to another (e.g. `/dev` → `/dev-assess`), stop the current phase and follow
   the delegated skill's file first, exactly as it says.
 - `$ARGUMENTS` in a skill file means the arguments supplied by the user or by the parent skill's delegation.
-- Claude UI mechanics have Codex fallbacks:
+- Claude UI/CLI mechanics that appear across skill files have Codex fallbacks — this list is the
+  canonical translation table; don't re-derive it per skill, and extend it here (not locally) when a
+  new one turns up:
   - `/rename ...`: no-op in Codex; keep the intended title in the working summary if useful.
+  - `/recap`: summarize from available context instead.
+  - `/loop`: treat as one iteration unless continuous monitoring was explicitly requested.
   - `Task(...)` / subagent delegation: do the work locally unless the user explicitly asks for parallel delegation.
-  - `/ultrareview`: perform a normal Codex code-review pass focused on bugs, regressions, security, and tests instead.
+  - `/code-review ultra` (called after PR creation in `/dev-pr`; `/ultrareview` was the old name for the
+    same thing, now deprecated): this launches a billed, Claude-Code-only cloud review that neither
+    Codex nor even a plain Claude Code agent can trigger programmatically. Perform a normal Codex
+    code-review pass instead, focused on bugs, regressions, security, and tests.
+  - `Ctrl+B` (Claude Code's background-execution shortcut, used e.g. in `/dev` Phase 4 for slow test
+    suites): no Codex equivalent — run the slow step sequentially, or tell the user it's running so they
+    can work elsewhere while waiting.
+  - `claude --worktree -C <path>` (used in `/dev` Phase 3 for parallel multi-repo development): no
+    direct Codex flag equivalent. If simultaneous work across repos is genuinely needed, either run
+    Codex sessions sequentially per repo, or set up the isolated copies yourself first with
+    `git worktree add <path> <branch>` before starting Codex in each one.
+  - If `jq` is unavailable in the environment (several skills read/write `memory/*.json` via `jq`), use
+    Python's `json` module for the same read-modify-write instead of skipping the memory update.
 
 Preserve every safety gate written into the skill files: ask before destructive operations, before
 pushes, before Jira transitions/comments, and before any other external state change — unless the user
