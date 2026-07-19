@@ -248,6 +248,28 @@ with open(profile_path, 'w') as f:
 
 If I/O fails, continue silently — never surface this error.
 
+**Self-model recompute** (cheap, run every cycle — same silent, no-confirmation-needed spirit as
+the rest of this step): re-derive the recurring cross-ticket blind spots from the memory files
+just written and merge them into the same profile.
+
+```bash
+python3 "$WS/scripts/self_model.py" "$WS/memory" > /tmp/self_model_$$.json 2>/dev/null || echo '[]' > /tmp/self_model_$$.json
+python3 -c "
+import json
+profile = json.load(open('$WS/memory/user_profile.json'))
+profile['self_model'] = {
+    'top_blind_spots': json.load(open('/tmp/self_model_$$.json')),
+    'last_computed': __import__('datetime').datetime.utcnow().isoformat() + 'Z',
+}
+json.dump(profile, open('$WS/memory/user_profile.json', 'w'), indent=2)
+"
+rm -f /tmp/self_model_$$.json
+```
+
+Empty `top_blind_spots` is a normal, valid result — it means nothing has independently recurred
+across 2+ distinct tickets yet, not that the mechanism is broken. Don't force a result to appear
+non-empty.
+
 ---
 
 ## Step 3 — Reflection analysis (closing mode only)
@@ -322,19 +344,24 @@ jq empty $WS/memory/patterns.json 2>/dev/null || echo '{"patterns":[]}' > $WS/me
 
 jq --arg pattern "<detected pattern description>" \
    --arg type "error|success" \
+   --arg ticket "<TICKET_ID>" \
    --argjson tags '["<repo, or omit for a universal pattern>"]' '
   if any(.patterns[]; .pattern == $pattern)
   then .patterns |= map(
     if .pattern == $pattern
     then .frequency += 1 | .confidence = [(.confidence + 0.1), 0.95] | min
+      | .origin_tickets = ((.origin_tickets // []) + [$ticket] | unique)
     else . end
   )
-  else .patterns += [{"pattern": $pattern, "type": $type, "frequency": 1, "confidence": 0.5, "tags": $tags}]
+  else .patterns += [{"pattern": $pattern, "type": $type, "frequency": 1, "confidence": 0.5, "tags": $tags, "origin_tickets": [$ticket]}]
   end
 ' $WS/memory/patterns.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/patterns.json
 ```
 
-Skip writing if no recurring pattern was detected.
+`origin_tickets` (added alongside `frequency`) is what lets `scripts/self_model.py` tell "the same
+lesson independently rediscovered across different tickets" apart from "recorded twice in one
+closing session" — track it even though nothing reads it directly here. Skip writing if no
+recurring pattern was detected.
 
 ---
 

@@ -198,6 +198,11 @@ Apply the profile throughout this session:
 - `workflow.frequently_uses` → proactively suggest those subcommands when relevant
 - `vocabulary.preferred_terms` → use the user's own words
 - `technical.recurring_decisions` → surface them as the default option when the same choice arises
+- `self_model.top_blind_spots` — recurring mistakes verified across 2+ distinct tickets (not a
+  single ticket's history, see `scripts/self_model.py`). Check each one against this ticket
+  during Phase 0.5 (`/dev-assess` Section B already does this explicitly) and Phase 3
+  development: if it applies, take the corrective action proactively — don't wait to be
+  corrected the same way again.
 
 **Step 1 — Read Jira ticket:**
 ```bash
