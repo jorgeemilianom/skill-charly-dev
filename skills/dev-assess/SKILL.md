@@ -23,18 +23,10 @@ This skill performs the full pre-development analysis before any code is written
 Run all of the following **simultaneously** before doing anything else.
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
-PROJECTS_PREFIX="${PROJECTS_SUBDIR:+$PROJECTS_SUBDIR/}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 
 # 1 — Read ticket from Jira
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
@@ -126,17 +118,10 @@ Cite origin ticket when relevant: `"En MSOF-XXX se adoptó el mismo patrón y fu
 Use the epic key extracted in Step 0. If no epic, skip silently.
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/core/jira-search.py query \
   "project = $PROJECT_KEY AND parent = <EPIC_KEY> ORDER BY status, priority" \
   --max-results 50 --json
@@ -175,15 +160,9 @@ For each repo detected in A.1, check whether it already has a client folder unde
 is generic folder-scanning, the same regardless of which client/repo it's run for:
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 for REPO in <detected-repos>; do
   # 1. Exact-name convention: Business/<repo>/
@@ -209,15 +188,9 @@ ticket** — if the user wants to skip it for now, respect that and continue str
 
 **For QuintaApp-Api** (if affected):
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cat $WS/projects/QuintaApp-Api/CLAUDE.md
 cat $WS/projects/QuintaApp-Api/Makefile
 ls $WS/projects/QuintaApp-Api/internal/core/domain/
@@ -252,7 +225,7 @@ ls $WS/projects/CloudHubCorp/src/ 2>/dev/null
 ls $WS/projects/CloudHubCorp/api/ 2>/dev/null
 ls $WS/projects/CloudHubCorp/Backoffice/src/ 2>/dev/null
 ```
-Critical rules: always scope SQL with `business_id`; never use PUT/DELETE; always run `make build` after Backoffice changes; branch flow is `feature/*` → `develop` → `master` (never push direct to master).
+Quick reminders (not exhaustive — `CLAUDE.md` above is the actual source, read it before trusting this line): always scope SQL with `business_id`; prefer GET/POST, treat existing PUT/DELETE routes as legacy, don't add new ones without updating CORS/proxy/cache/tests together; always run `make build` after Backoffice changes; branch flow is `feature/*` → `develop` → `master` (never push direct to master).
 
 Internalize CLAUDE.md rules for each affected repo before any exploration — they override default patterns.
 
@@ -418,17 +391,10 @@ _Generado por /dev-assess — <ISO date>_
 
 Post it:
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/workflow/jira-comment.py add "<TICKET_ID>" "<comment text>"
 ```
 
@@ -437,17 +403,10 @@ uv run $JIRA_SKILL/workflow/jira-comment.py add "<TICKET_ID>" "<comment text>"
 Check ticket description length from Step 0 JSON output. If thin, add labels to flag it and update with a structured description:
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 
 # Add label to signal the ticket has been technically assessed
 uv run $JIRA_SKILL/core/jira-issue.py update "<TICKET_ID>" --labels "assessed"
@@ -475,17 +434,10 @@ Notas técnicas: ver comentario de análisis técnico.
 ### H.3 — Transition to In Progress (if fresh start and user confirmed)
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/workflow/jira-transition.py do "<TICKET_ID>" "In Progress"
 ```
 
@@ -529,11 +481,15 @@ import json, os, subprocess, datetime
 
 def workspace_root():
     try:
-        g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+        g = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
     except Exception:
         g = os.getcwd()
-    p = os.path.dirname(g)
-    return p if os.path.exists(os.path.join(p, 'CLAUDE.md')) else g
+    d = g
+    while d and d != os.path.dirname(d):
+        if os.path.exists(os.path.join(d, 'CLAUDE.md')) and os.path.exists(os.path.join(d, 'config.example.sh')):
+            return d
+        d = os.path.dirname(d)
+    return g
 
 WS = workspace_root()
 os.makedirs(f'{WS}/memory/assessments', exist_ok=True)

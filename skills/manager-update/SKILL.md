@@ -19,15 +19,9 @@ exists (root or per-client), it's authoritative and overrides the generic steps 
 ## Step 0 — Preconditions
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 [ -f "$WS/Business/Agent.md" ] && cat "$WS/Business/Agent.md"
 CLIENTE="<\$ARGUMENTS>"
 [ -d "$WS/Business/$CLIENTE" ] && echo EXISTS || echo MISSING

@@ -40,11 +40,15 @@ import os, subprocess
 
 def workspace_root():
     try:
-        git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
+        g = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
     except Exception:
-        git_root = os.getcwd()
-    parent = os.path.dirname(git_root)
-    return parent if os.path.exists(os.path.join(parent, 'CLAUDE.md')) else git_root
+        g = os.getcwd()
+    d = g
+    while d and d != os.path.dirname(d):
+        if os.path.exists(os.path.join(d, 'CLAUDE.md')) and os.path.exists(os.path.join(d, 'config.example.sh')):
+            return d
+        d = os.path.dirname(d)
+    return g
 
 WS = workspace_root()
 ```
@@ -52,15 +56,9 @@ WS = workspace_root()
 In bash blocks, compute it inline before any `memory/` path:
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 ```
 
 ---
@@ -88,17 +86,10 @@ gh pr list --head feature/<TICKET_ID> --json state,mergedAt --state all | head -
 Run in parallel:
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
 git fetch origin
 git branch --show-current
@@ -122,11 +113,15 @@ import json, os, datetime, subprocess
 
 def workspace_root():
     try:
-        git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
+        g = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
     except Exception:
-        git_root = os.getcwd()
-    parent = os.path.dirname(git_root)
-    return parent if os.path.exists(os.path.join(parent, 'CLAUDE.md')) else git_root
+        g = os.getcwd()
+    d = g
+    while d and d != os.path.dirname(d):
+        if os.path.exists(os.path.join(d, 'CLAUDE.md')) and os.path.exists(os.path.join(d, 'config.example.sh')):
+            return d
+        d = os.path.dirname(d)
+    return g
 
 WS = workspace_root()
 os.makedirs(f'{WS}/memory/snapshots', exist_ok=True)
@@ -177,11 +172,15 @@ import json, os, datetime, subprocess
 
 def workspace_root():
     try:
-        git_root = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
+        g = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
     except Exception:
-        git_root = os.getcwd()
-    parent = os.path.dirname(git_root)
-    return parent if os.path.exists(os.path.join(parent, 'CLAUDE.md')) else git_root
+        g = os.getcwd()
+    d = g
+    while d and d != os.path.dirname(d):
+        if os.path.exists(os.path.join(d, 'CLAUDE.md')) and os.path.exists(os.path.join(d, 'config.example.sh')):
+            return d
+        d = os.path.dirname(d)
+    return g
 
 WS = workspace_root()
 profile_path = f'{WS}/memory/user_profile.json'
@@ -313,15 +312,9 @@ Cross current cycle data with existing memory:
 | First occurrence | either | `0.5` |
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 jq empty $WS/memory/patterns.json 2>/dev/null || echo '{"patterns":[]}' > $WS/memory/patterns.json
 
@@ -354,15 +347,9 @@ Qualifying decisions: architecture choice, implementation strategy, reused patte
 | `failure` | Reverted, blocked progress, rejected in review | 0.0 – 0.3 |
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 jq empty $WS/memory/decisions.json 2>/dev/null || echo '{"decisions":[]}' > $WS/memory/decisions.json
 
@@ -392,15 +379,9 @@ Criteria: actionable, reusable across tickets, non-obvious. Skip if no rule meet
 ## Step 7 — Memory Persistence (closing mode only — no user confirmation needed)
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 ```
 
 ### 7.1 — Save detected errors (only if found in Step 3b)
@@ -501,17 +482,10 @@ Do not interrupt the flow for I/O errors — if both fail, continue silently.
 ## Step 8 — Jira transition to Done (closing mode only — automatic, no authorization needed)
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/workflow/jira-transition.py do "<TICKET_ID>" "Done"
 ```
 
@@ -537,17 +511,10 @@ except Exception:
 ```
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/workflow/jira-comment.py add "<TICKET_ID>" "Ticket completado
 
 Resumen: <one paragraph describing what was implemented — plain text, no markdown>

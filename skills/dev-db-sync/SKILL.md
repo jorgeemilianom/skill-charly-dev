@@ -19,16 +19,10 @@ Run DB sync for: **$ARGUMENTS**
 ## Step 0 — Load VPS config
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 cat $WS/memory/vps-config.json 2>/dev/null
 ```
 
@@ -114,8 +108,7 @@ Ask:
 
 If confirmed:
 ```bash
-source "$WS/config.sh"
-PROJECTS_PREFIX="${PROJECTS_SUBDIR:+$PROJECTS_SUBDIR/}"
+source "$WS/scripts/workspace-env.sh"
 make -C $WS/${PROJECTS_PREFIX}<project> <local_import_make_target>"$WS/memory/db-backups/<downloaded_file>"
 ```
 

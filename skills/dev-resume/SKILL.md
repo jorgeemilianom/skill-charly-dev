@@ -18,18 +18,10 @@ Resume development context for: **$ARGUMENTS**
 
 Run in parallel:
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
-PROJECTS_PREFIX="${PROJECTS_SUBDIR:+$PROJECTS_SUBDIR/}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
 
 cat $WS/memory/snapshots/<TICKET_ID>.json 2>/dev/null

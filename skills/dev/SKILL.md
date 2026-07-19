@@ -28,6 +28,21 @@ Throughout this workflow, act as a **senior engineer** familiar with the three M
 
 ---
 
+## Workspace Root Resolution
+
+This applies across `/dev`, `/manager`, and every sibling skill — the exact same 3-line `WS="..."`
+snippet opens nearly every bash block in this skill family. It's inlined rather than sourced from
+`scripts/workspace-root.sh` on purpose: a skill can't source that script before it knows where the
+workspace root is, which is exactly the problem the snippet solves. Keep the inline copies and
+`scripts/workspace-root.sh` in sync if the algorithm ever changes — it walks up looking for a directory
+with **both** `CLAUDE.md` and `config.example.sh`, not `CLAUDE.md` alone, because sub-repos under
+`projects/` and some `Business/<cliente>/` folders have their own local `CLAUDE.md` that would
+otherwise false-match. Once `$WS` is known, `source "$WS/scripts/workspace-env.sh"` loads `config.sh`
+plus the `JIRA_SKILL`/`PROJECTS_PREFIX` vars most steps need — that part has no bootstrap problem, so
+it's a real shared script, not a duplicated snippet.
+
+---
+
 ## Build the Project Toolbox as You Go
 
 This applies across `/dev` and every sibling skill. Before improvising a multi-step shell/git/gh/jq
@@ -50,15 +65,9 @@ the strongest possible learning signal — stronger than anything reconstructed 
 immediately, don't wait for closing:
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 jq empty $WS/memory/global_rules.json 2>/dev/null || echo '{"rules":[]}' > $WS/memory/global_rules.json
 cat $WS/memory/global_rules.json
 ```
@@ -95,15 +104,9 @@ scripting convention's confirmation line.
 Run before anything else, every invocation — cheap, no prompts:
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 [ -f "$WS/config.sh" ] && { [ -f ~/.env.jira ] || [ -f ~/.jira/profiles.json ]; } && gh auth status &>/dev/null && echo OK || echo MISSING
 ```
 
@@ -150,17 +153,10 @@ gh pr view "$ARGUMENTS" --json title,body,headRefName,baseRefName,state,url,revi
 1. Extract ticket ID from the branch name (e.g. `feature/msof-42` → `MSOF-42`).
 2. Read the Jira ticket:
    ```bash
-   WS=$(python3 -c "
-   import os, subprocess
-   try:
-       g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-   except:
-       g = os.getcwd()
-   p = os.path.dirname(g)
-   print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-   ")
-   source "$WS/config.sh"
-   JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+   WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+   while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+   [ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+   source "$WS/scripts/workspace-env.sh"
    uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
    ```
 3. Rename session: `/rename MSOF-XXX | <ticket summary>`
@@ -179,11 +175,15 @@ import json, os, subprocess
 
 def workspace_root():
     try:
-        g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+        g = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
     except Exception:
         g = os.getcwd()
-    p = os.path.dirname(g)
-    return p if os.path.exists(os.path.join(p, 'CLAUDE.md')) else g
+    d = g
+    while d and d != os.path.dirname(d):
+        if os.path.exists(os.path.join(d, 'CLAUDE.md')) and os.path.exists(os.path.join(d, 'config.example.sh')):
+            return d
+        d = os.path.dirname(d)
+    return g
 
 WS = workspace_root()
 try:
@@ -202,17 +202,10 @@ Apply the profile throughout this session:
 
 **Step 1 — Read Jira ticket:**
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
 ```
 
@@ -224,15 +217,9 @@ If confirmed → invoke `/dev-migration <TICKET_ID>`, stop here.
 
 **Step 4 — Check branch state** across all three repos:
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 git -C $WS/projects/QuintaApp-Api      fetch origin 2>/dev/null; git -C $WS/projects/QuintaApp-Api      branch -a | grep -i "<TICKET_ID>"
 git -C $WS/projects/QuintaApp-Frontend fetch origin 2>/dev/null; git -C $WS/projects/QuintaApp-Frontend branch -a | grep -i "<TICKET_ID>"
 git -C $WS/projects/CloudHubCorp       fetch origin 2>/dev/null; git -C $WS/projects/CloudHubCorp       branch -a | grep -i "<TICKET_ID>"
@@ -248,16 +235,10 @@ If snapshot exists, use it to fast-track context. Still run git/PR checks to ver
 `<repo_path>` resolves to `$WS/projects/<repo-name>` (or `$WS/<repo-name>` if `PROJECTS_SUBDIR` is
 empty in `config.sh`):
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 
 # Detect base branch for this repo
 REPO_NAME=$(basename <repo_path>)
@@ -319,16 +300,10 @@ At any point, if relevant information is discovered that is **not already in the
 Detect the repo(s) affected by the ticket (from Phase 0.5). For each affected repo:
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 
 REPO_NAME=$(basename <repo_path>)
 BASE_BRANCH="master"; case "$REPO_NAME" in ${SPECIAL_REPO_PATTERNS// /|}) BASE_BRANCH="$SPECIAL_REPO_BASE";; esac
@@ -361,17 +336,10 @@ git -C <repo_path> rev-list --count origin/$BASE_BRANCH..$BRANCH_NAME   # how fa
 Applied if the user confirmed it in `/dev-assess`. Skip if already In Progress or branch already existed.
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/workflow/jira-transition.py do "<TICKET_ID>" "In Progress"
 ```
 
@@ -383,26 +351,20 @@ Make focused, minimal changes — only what the ticket asks for.
 
 - No refactoring, no extra comments, no docstrings unless explicitly requested.
 - Follow existing patterns in the codebase.
-- For Go: ensure `go build ./...` passes after each logical change.
-- For CloudHubCorp: run `make build` after any Backoffice change to rebuild static assets.
 
-**QuintaApp-Api architectural rules:**
-- New features follow the hexagonal flow: domain entity → port interface → service implementation → handler → MySQL repository
-- New domain errors: define in `internal/core/domain/errors.go`, add case in `mapError()` in `response.go`
-- Services only depend on port interfaces, never on concrete adapters
-- New spec for significant features: create `specs/features/<name>.md` using `specs/TEMPLATE.md`
+**Architecture rules**: each affected repo's own `CLAUDE.md` (`projects/<repo>/CLAUDE.md`) is the
+source of truth for its architecture, conventions, and gates — not a copy here. If Phase 0.5
+(`/dev-assess`) ran this session, it's already loaded (its Section A.2 reads it explicitly and says to
+internalize it before exploring). If this phase was reached directly — e.g. resuming with uncommitted
+changes, which skips 0.5 — read the affected repo's `CLAUDE.md` now, don't rely on memory of it from a
+prior session. A stale copy here has already drifted from the real rule once (`CloudHubCorp/CLAUDE.md`
+treats `PUT`/`DELETE` as legacy exceptions to avoid extending, not an absolute prohibition) — that's
+exactly the failure mode duplicating it here produces.
 
-**QuintaApp-Frontend rules:**
-- All fetches go through `src/services/apiClient.js`
-- New components need a `.test.jsx` file alongside them
-- No hardcoded URLs — use `import.meta.env.VITE_API_URL`
-
-**CloudHubCorp rules:**
-- Always scope SQL queries with `business_id`
-- Only POST and GET — never PUT or DELETE
-- Protected routes need `# useMiddleware` or `middleware:` attribute
-- PHP files start with `<?php #Business Hub Corp Framework` + `declare(strict_types=1);`
-- `make build` after any Backoffice change
+Two build habits worth calling out explicitly, since they're easy to skip mid-edit rather than because
+they're missing from each repo's own `CLAUDE.md`:
+- Go (`QuintaApp-Api`): run `go build ./...` after each logical change.
+- CloudHubCorp: run `make build` after any Backoffice change to rebuild static assets.
 
 ### Multi-project change order
 
@@ -503,16 +465,10 @@ Rules:
 - **Ask for explicit user authorization** before running `git push`.
 - If branch has diverged from base, rebase (never merge):
   ```bash
-  WS=$(python3 -c "
-  import os, subprocess
-  try:
-      g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-  except:
-      g = os.getcwd()
-  p = os.path.dirname(g)
-  print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-  ")
-  source "$WS/config.sh"
+  WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+  [ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  source "$WS/scripts/workspace-env.sh"
   REPO_NAME=$(basename $(git rev-parse --show-toplevel))
   BASE="master"; case "$REPO_NAME" in ${SPECIAL_REPO_PATTERNS// /|}) BASE="$SPECIAL_REPO_BASE";; esac
   git fetch origin && git rebase origin/$BASE
@@ -533,7 +489,7 @@ Delegated entirely to `/dev-pr`. Invoke it with the ticket ID:
 /dev-pr <TICKET_ID>
 ```
 
-`/dev-pr` will: run the pre-PR scan, build the PR body from test files and specs, create the PR against the correct base branch (`master` or `develop`), post a Jira comment, and run `/ultrareview`.
+`/dev-pr` will: run the pre-PR scan, build the PR body from test files and specs, create the PR against the correct base branch (`master` or `develop`), post a Jira comment, and run `/code-review ultra`.
 
 ---
 

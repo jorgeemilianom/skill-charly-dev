@@ -47,31 +47,32 @@ Read in parallel (from the checked-out branch):
 
 Evaluate across these dimensions in order of severity.
 
-> **CUSTOMIZE** — The blocking rules below are examples for a Go hexagonal API + React frontend + PHP multi-tenant stack. Replace with your project's architecture and conventions.
+**Baseline architecture rules — check against each repo's own `CLAUDE.md` (loaded in Step 2), not a
+copy here.** A hardcoded restatement in this file has already drifted from the real rule once
+(`CloudHubCorp/CLAUDE.md` treats `PUT`/`DELETE` as legacy exceptions to avoid extending, not an
+absolute prohibition — an earlier version of this file claimed the latter). Blocking-severity baseline
+categories to run through, per repo: hexagonal layering violations and error-handling conventions
+(`QuintaApp-Api`); the `apiClient`/test-file/env-var conventions (`QuintaApp-Frontend`); `business_id`
+scoping, HTTP verb conventions, auth middleware, file headers, and module naming (`CloudHubCorp`) — the
+specific rule for each is whatever that repo's `CLAUDE.md` actually says today.
 
-**Blocking** (must be fixed before merging):
+> **CUSTOMIZE** — The review-specific checks below (beyond the baseline above) are examples for a Go
+> hexagonal API + React frontend + PHP multi-tenant stack. Replace with your project's known failure
+> patterns.
 
-*QuintaApp-Api (Go hexagonal):*
-- **Architecture violation**: use-case importing infrastructure; handler containing business logic; service depending on concrete adapter (not interface); domain entity importing from adapters layer
-- **Error handling**: domain error not defined in `errors.go`; error not mapped in `mapError()` in `response.go`; wrong HTTP status returned for a domain error type
-- **Coverage regression**: new logic added without tests; coverage in `./internal/core/...` or `./internal/adapters/primary/...` drops below 80%
+**Blocking, beyond the baseline** (tribal knowledge from past reviews, not necessarily in `CLAUDE.md`):
+
+*QuintaApp-Api:*
+- **Coverage regression**: new logic added without tests; coverage in `./internal/core/...` or `./internal/adapters/primary/...` drops below the repo's gate
 - **JWT misuse**: refresh token used as access token (missing `Type` field validation); token not validated with `middleware.Auth()`
 - **Test fixture issues**: `time.Now()` in booking tests (causes float precision drift in TotalPrice — use fixed `time.Date(...)` instead); `bcrypt.DefaultCost` in tests (too slow — use `bcrypt.MinCost`)
 - **OpenAPI drift**: handler endpoint changed but `spec_openapi/openapi.yaml` not updated
 
-*QuintaApp-Frontend (React):*
-- **Direct fetch**: API call in a component or hook without going through `src/services/apiClient.js`
-- **Missing test file**: new component added without a `.test.jsx` file alongside it
-- **Hardcoded URL**: API URL not read from `import.meta.env.VITE_API_URL`
+*QuintaApp-Frontend:*
 - **Auth bypass**: token not read from `localStorage.access_token` or Bearer header missing
 
-*CloudHubCorp (PHP multi-tenant):*
-- **Missing `business_id`**: SQL query without `business_id` scope — data leak between tenants
-- **Forbidden HTTP methods**: using `PUT` or `DELETE` — only `POST` and `GET` are allowed
-- **Missing auth middleware**: route without `# useMiddleware` or `middleware:` attribute on a protected endpoint
-- **Wrong file header**: PHP file not starting with `<?php #Business Hub Corp Framework` + `declare(strict_types=1);`
-- **Backoffice not rebuilt**: Backoffice-related changes without `make build` in the last commits
-- **Module naming violation**: core module using `m_` prefix, or add-on module missing `m_` prefix
+*CloudHubCorp:* nothing beyond the baseline identified yet — add here as review sessions surface
+patterns not already covered by `CLAUDE.md`.
 
 **Non-blocking** (improvements/style):
 
