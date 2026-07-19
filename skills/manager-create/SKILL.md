@@ -64,20 +64,22 @@ whatever the user gave you, organized readably).
 
 ---
 
-## Step 2 — Optional manifest (repos + Jira key)
+## Step 2 — Optional manifest (repos and/or Jira reference)
 
 Ask:
-> "¿Qué repos de `projects/` pertenecen a este cliente? (separados por espacio, o ninguno)"
-> "¿Tiene un project key de Jira asociado? (o ninguno)"
+> "¿Qué repos de `projects/` pertenecen a este cliente? (separados por espacio, o ninguno — si el cliente no tiene código clonado en este workspace, no aplica)"
+> "¿Tiene un project key de Jira asociado, o trabaja como épica dentro de un proyecto existente? (o ninguno)"
 
-If the answer to either is non-empty, offer to persist it:
+If any answer is non-empty, offer to persist it:
 > "¿Guardo esto en `Business/<cliente>/client.md` para que `/dev` no tenga que volver a preguntar?"
 
-If confirmed, write:
+If confirmed, write only the fields that apply (omit `repos:` entirely for a client with no local
+checkout, use `jira_key` for a full Jira project key or `jira_epic` for an epic inside an existing
+project):
 ```yaml
 ---
-repos: [<repo1>, <repo2>]
-jira_key: <KEY>
+repos: [<repo1>, <repo2>]     # omit if this client has no repo cloned under projects/
+jira_key: <PROJECT_KEY>       # or jira_epic: <EPIC_KEY>, whichever applies
 ---
 ```
 to `Business/<cliente>/client.md`. If declined, skip silently — this is a convenience, never a

@@ -12,12 +12,19 @@ Content inside each client folder is free-form: notes, scripts, credentials, wha
 needs. There's no fixed schema to follow — the skill reads whatever's there.
 
 One convenience file the skill knows how to use if present: `client.md`, a small optional manifest
-that maps repos in `projects/` back to this client:
+that maps repos in `projects/` back to this client, and/or points at its Jira reference — only include
+the fields that apply (a client with no local checkout just omits `repos:`; use `jira_key` for a full
+project key or `jira_epic` for an epic inside an existing project):
 
 ```yaml
 ---
 repos: [QuintaApp-Api, QuintaApp-Frontend]
 jira_key: MSOF
+---
+```
+```yaml
+---
+jira_epic: MSOF-304
 ---
 ```
 
