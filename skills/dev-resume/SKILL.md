@@ -22,7 +22,7 @@ WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
 [ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 source "$WS/scripts/workspace-env.sh"
-uv run $JIRA_SKILL/utility/jira-qa-gather.py --json "<TICKET_ID>"
+uv run $JIRA_SKILL/utility/jira-qa-gather.py --json "<TICKET_ID>" | python3 "$WS/scripts/jira_trim.py"
 
 cat $WS/memory/snapshots/<TICKET_ID>.json 2>/dev/null
 cat $WS/memory/assessments/<TICKET_ID>.json 2>/dev/null
@@ -40,8 +40,9 @@ for REPO in $REPOS; do
 done
 ```
 
-`jira-qa-gather` returns far more than the plain ticket fields — read selectively, don't dump the whole
-response (`issue.renderedFields` especially is verbose HTML, skip it; use `issue.fields` instead):
+`jira-qa-gather` returns far more than the plain ticket fields — piped through `jira_trim.py` above,
+which already strips the verbose HTML `renderedFields` duplicate and null/wire-noise fields (`self`
+links, `avatarUrls`), roughly halving its size with no information loss. Worth pulling out explicitly:
 - `worklog_total_seconds` — real time already logged, useful context for "how far along is this."
 - `issue_links` / `web_links` — may already have the PR linked structurally (see `/dev-pr`'s weblink
   step) even if `gh pr list` above doesn't find it (e.g. PR from a fork, or repo detection missed it).

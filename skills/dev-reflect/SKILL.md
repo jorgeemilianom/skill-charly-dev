@@ -92,7 +92,7 @@ WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
 [ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 source "$WS/scripts/workspace-env.sh"
-uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
+uv run $JIRA_SKILL/core/jira-issue.py --json get "<TICKET_ID>" | python3 "$WS/scripts/jira_trim.py"
 git fetch origin
 git branch --show-current
 git log master..HEAD --oneline

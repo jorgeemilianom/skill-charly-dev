@@ -129,7 +129,7 @@ uv run $JIRA_SKILL/workflow/jira-create.py issue $PROJECT_KEY "<summary>" -t <ty
 
 If a future Jira project configured through this template is company-managed instead of team-managed,
 the epic-link field is different (classic "Epic Link" custom field, not `parent`) — check an existing
-epic-linked issue with `jira-issue.py get <KEY> --json` and look for either `fields.parent` or a
+epic-linked issue with `jira-issue.py --json get <KEY>` and look for either `fields.parent` or a
 `customfield_*` holding the epic key before assuming `parent` works there too.
 
 ## Step 6 — Report and offer to continue

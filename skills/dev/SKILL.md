@@ -158,7 +158,7 @@ gh pr view "$ARGUMENTS" --json title,body,headRefName,baseRefName,state,url,revi
    while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
    [ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
    source "$WS/scripts/workspace-env.sh"
-   uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
+   uv run $JIRA_SKILL/core/jira-issue.py --json get "<TICKET_ID>" | python3 "$WS/scripts/jira_trim.py"
    ```
 3. Rename session: `/rename MSOF-XXX | <ticket summary>`
 4. Check out the branch: `git fetch origin && git checkout <branch>`
@@ -212,7 +212,7 @@ WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
 [ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 source "$WS/scripts/workspace-env.sh"
-uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
+uv run $JIRA_SKILL/core/jira-issue.py --json get "<TICKET_ID>" | python3 "$WS/scripts/jira_trim.py"
 ```
 
 **Step 2 — Rename session:** `/rename MSOF-XXX | <ticket summary>`

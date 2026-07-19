@@ -37,7 +37,7 @@ while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.examp
 source "$WS/scripts/workspace-env.sh"
 
 # 1 — Read ticket from Jira (skip and reuse if already fetched this session — see above)
-TICKET_JSON=$(uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json)
+TICKET_JSON=$(uv run $JIRA_SKILL/core/jira-issue.py --json get "<TICKET_ID>" | python3 "$WS/scripts/jira_trim.py")
 echo "$TICKET_JSON"
 
 # 2 — Check branch state across all sub-repos
