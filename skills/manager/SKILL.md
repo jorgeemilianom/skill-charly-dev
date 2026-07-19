@@ -40,10 +40,11 @@ siblings. At minimum, expect and honor rules like:
   or responses.
 - No deploys, uploads, write SQL, service restarts, cache clears, or production changes without
   explicit authorization.
-- **Never run `git add`, `git commit`, `git push`, or publish anything from within `Business/`** — it
-  can hold sensitive data and nested repos for multiple clients. This holds even if a step elsewhere in
-  this skill family would otherwise suggest a git operation — none of `/manager`, `/manager-create`, or
-  `/manager-update` ever commit or push inside `Business/` themselves, precisely because of this.
+- Keep `Business/` (if it's backed by its own repo) up to date: `fetch`/`pull` before relying on its
+  content, `commit`/`push` local changes when appropriate. Never mix files from more than one client in
+  the same commit. This content must never end up committed to the public `skill-charly-dev` repo
+  itself — that's why `Business/*` is in its `.gitignore` — always confirm you're operating inside
+  `Business/` (or a client subfolder) before running git, never from the parent workspace root.
 
 If a specific client folder has its own manual (e.g. `Business/<cliente>/Agent.md`), that file is the
 authoritative operational manual for that client — read and follow it before applying
@@ -52,7 +53,29 @@ Treat its existing files/conventions as-is; never impose `context.md`/`client.md
 a client that already has its own established structure.
 
 If no `Business/Agent.md` exists yet, none of this applies — proceed with the generic conventions
-below.
+below, which follow the same git-sync spirit (fetch first, ask before push) without assuming a
+specific policy document exists.
+
+---
+
+## Keeping `Business/` in sync (if it's a git repo)
+
+Applies across `/manager` and every sibling skill, same cross-reference pattern as above.
+
+```bash
+[ -d "$WS/Business/.git" ] && git -C "$WS/Business" fetch origin 2>/dev/null && git -C "$WS/Business" status --short
+```
+
+If this shows the local branch behind `origin`, surface it before relying on possibly-stale content:
+> "`Business/` tiene cambios remotos nuevos. ¿Hago `pull` antes de seguir?"
+
+After writing/updating files in a client subfolder, offer to commit (scoped to that one client's
+files only — never a blanket `git add .` across multiple clients) and push, same authorization pattern
+`/dev` uses for code pushes — never push without the user's explicit go-ahead in this turn:
+> "¿Confirmás el commit y push de `Business/<cliente>/` a su repo?"
+
+If `Business/` has no `.git` (not a repo, or the user manages it manually), skip this section silently
+— never initialize a repo there uninvited.
 
 ---
 

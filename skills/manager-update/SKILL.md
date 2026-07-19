@@ -88,5 +88,6 @@ Confirm the diff/summary of what changed before writing, same as any other local
 ## Step 4 — Report
 
 Summarize what changed under `Business/<cliente>/`. Remind the user `credentials.md` (if present) was
-left untouched. This skill never runs `git add`/`commit`/`push` inside `Business/` — committing/pushing
-whatever backs that folder (if anything) is the user's call, done outside this flow.
+left untouched. If `Business/` is backed by its own repo, see "Keeping `Business/` in sync" in
+`manager/SKILL.md` — offer to commit/push just this client's changes, with the user's explicit
+go-ahead, never mixed with another client's files in the same commit.

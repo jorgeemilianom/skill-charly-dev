@@ -115,9 +115,9 @@ Summarize what was created (files written, under `Business/<cliente>/`) and remi
 - `credentials.md` needs to be filled in by hand — nothing sensitive was asked in this conversation.
 - Content here is private: `Business/` is gitignored except for its top-level `README.md` (see
   `Business/README.md`), so nothing written in this step gets committed to the public skill repo.
-- This skill never runs `git add`/`commit`/`push` inside `Business/` itself — if `Business/` is backed
-  by its own repo (single shared repo or one per client), committing/pushing that is the user's call,
-  done outside this flow.
+- If `Business/` is backed by its own repo, see "Keeping `Business/` in sync" in `manager/SKILL.md` —
+  offer to commit/push just this client's new files, scoped to `Business/<cliente>/` only, with the
+  user's explicit go-ahead.
 
 If this was invoked mid-`/dev-assess` (repo names were passed in `$ARGUMENTS`), report done and resume
 the assessment that triggered this bootstrap.
