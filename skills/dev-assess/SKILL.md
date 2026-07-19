@@ -253,6 +253,13 @@ Internalize CLAUDE.md rules for each affected repo before any exploration — th
 
 ## Section B — Codebase Exploration (passive)
 
+**Check `memory/user_profile.json`'s `self_model.top_blind_spots` first** (loaded by `/dev`'s Step 0
+if invoked through the core loop; read it directly here if `/dev-assess` was invoked standalone). Each
+entry is a mistake verified across 2+ distinct past tickets, not a one-off — e.g. if a blind spot says
+"type dynamic backend data as `any`, not `unknown`," and this ticket touches a store/type receiving
+backend data, apply that directly instead of rediscovering it mid-implementation. Empty list is normal
+early on — don't fabricate a match that isn't really there.
+
 For each affected repo, run grep and git log in parallel. Use keywords from the ticket title/description.
 
 **QuintaApp-Api:**
