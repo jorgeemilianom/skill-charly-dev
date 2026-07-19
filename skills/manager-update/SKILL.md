@@ -61,8 +61,9 @@ if `context.md` is long — summarize, then offer to show the full file on reque
 
 Ask what the user wants to do. Typical options (don't force this list — take whatever they describe):
 - Agregar una nota nueva al contexto (se agrega con fecha, no se pisa lo existente).
-- Actualizar el manifiesto opcional (`repos:` / `jira_key:` en `client.md`) — crear el archivo si no
-  existía y el usuario ahora quiere agregarlo.
+- Actualizar el manifiesto opcional (`repos:` / `jira_key:` / `jira_epic:` / `exec: ssh` en
+  `client.md`) — crear el archivo si no existía y el usuario ahora quiere agregarlo. Si agrega
+  `exec: ssh` a un cliente que ya tenía otros campos, preservarlos — nunca pisar el manifiesto entero.
 - Cualquier otro archivo suelto que quiera agregar o editar dentro de la carpeta.
 
 **Never rewrite or ask about `credentials.md` content** — that file is edited by hand, outside this
