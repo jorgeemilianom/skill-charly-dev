@@ -22,15 +22,9 @@ its description; Codex resolves it the same way via `agent-context.md`). Run the
 does before diving into a multi-step conversation that would otherwise fail deep in, at the Jira step:
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 [ -f "$WS/config.sh" ] && { [ -f ~/.env.jira ] || [ -f ~/.jira/profiles.json ]; } && echo OK || echo MISSING
 ```
 
@@ -85,15 +79,9 @@ draft without confirmation.
 
 Read the cached epic list first:
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cat $WS/memory/epics.json 2>/dev/null
 ```
 
@@ -103,8 +91,7 @@ If it exists, show the cached epics for `PROJECT_KEY` (from `config.sh`) and ask
 If it's missing, or the user wants a refreshed list, or none of the cached epics fit, query Jira and
 rewrite the cache:
 ```bash
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/core/jira-search.py --json query "project = $PROJECT_KEY AND issuetype = Epic ORDER BY created DESC"
 ```
 
@@ -132,17 +119,10 @@ turning the new issue into a subtask of the epic instead of a top-level Story/Ta
 Use `--fields-json` instead, which preserves the requested type:
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/workflow/jira-create.py issue $PROJECT_KEY "<summary>" -t <type> -d "<description>" --fields-json '{"parent": {"key": "<EPIC_KEY>"}}' --dry-run
 uv run $JIRA_SKILL/workflow/jira-create.py issue $PROJECT_KEY "<summary>" -t <type> -d "<description>" --fields-json '{"parent": {"key": "<EPIC_KEY>"}}'
 ```

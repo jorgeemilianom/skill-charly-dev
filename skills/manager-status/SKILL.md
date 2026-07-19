@@ -29,15 +29,9 @@ through, without forcing the conversation toward writing something down.
 ### Step 1 — Load everything
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 CLIENTE="<cliente>"
 [ -d "$WS/Business/$CLIENTE" ] && echo EXISTS || echo MISSING
 [ -f "$WS/Business/$CLIENTE/Agent.md" ] && cat "$WS/Business/$CLIENTE/Agent.md"
@@ -51,8 +45,7 @@ If `MISSING`: say so and offer `/manager-create <cliente>`. Stop here.
 
 If `client.md` has `repos:`, check each mapped repo for recent activity:
 ```bash
-source "$WS/config.sh"
-PROJECTS_PREFIX="${PROJECTS_SUBDIR:+$PROJECTS_SUBDIR/}"
+source "$WS/scripts/workspace-env.sh"
 for REPO in <repos from client.md>; do
   git -C "$WS/${PROJECTS_PREFIX}${REPO}" fetch origin -q 2>/dev/null
   git -C "$WS/${PROJECTS_PREFIX}${REPO}" branch -a 2>/dev/null | grep -oiE "(feature|fix)/[a-z]+-[0-9]+" | sort -u
@@ -92,15 +85,9 @@ this workspace.
 ## Multi-client overview: `status` (no client name)
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 find "$WS/Business" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | xargs -n1 basename
 ```
 

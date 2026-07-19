@@ -1,6 +1,6 @@
 ---
 name: dev-pr
-description: "Create a pull request or handle review comments for a ticket. Phase 1: pre-PR scan, build PR body, create PR via gh, post Jira comment, run /ultrareview. Phase 2 (subcommand 'review'): record review round, implement fixes, validate, commit, push. Delegated to by /dev for PR creation and review handling."
+description: "Create a pull request or handle review comments for a ticket. Phase 1: pre-PR scan, build PR body, create PR via gh, post Jira comment, run /code-review ultra. Phase 2 (subcommand 'review'): record review round, implement fixes, validate, commit, push. Delegated to by /dev for PR creation and review handling."
 allowed-tools: Bash Read Write
 ---
 
@@ -19,16 +19,10 @@ Optional subcommand: `review` — skip directly to Phase 2 (handle existing revi
 ## Repo and branch detection (run first, reuse throughout)
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 
 # Detect which repo we're in
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
@@ -147,17 +141,10 @@ EOF
 After the PR is created, capture the URL from the `gh pr create` output, then post a Jira comment automatically (no authorization needed):
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
-source "$WS/config.sh"
-JIRA_SKILL="${JIRA_SCRIPTS:-$WS/scripts/jira-communication/scripts}"
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/workflow/jira-comment.py add "<TICKET_ID>" "PR abierto
 
 Titulo: [$PR_PREFIX][<TICKET_ID>] <brief description>
@@ -172,22 +159,23 @@ Cambios principales:
 
 Jira comment format rule: plain text only. No markdown — no **, no ##, no * or - as bullets, no backticks. Separate sections with blank lines. Use "Label: value" for structured data.
 
-### Post-PR: /ultrareview
+### Post-PR: /code-review ultra
 
-After creating the PR, run a multi-agent review in parallel:
+After creating the PR, run a multi-agent cloud review in parallel (this is the current, billed
+command — `/ultrareview` is a deprecated alias for the same thing, don't use it):
 
 ```
-/ultrareview
+/code-review ultra
 ```
 
-**Wait for `/ultrareview` to finish before telling the user the PR is ready for human review.** If issues are reported:
+**Wait for it to finish before telling the user the PR is ready for human review.** If issues are reported:
 1. Fix each issue found.
 2. Commit: `<TICKET_ID> | address automated review findings`
 3. Ask for authorization before pushing.
 
 **Skip when**: the PR is trivial (one-line change, docs only, config with no logic).
 
-After ultrareview completes (or is skipped), offer proactively:
+After the review completes (or is skipped), offer proactively:
 > "PR listo para revisión humana. ¿Guardo un checkpoint? (`/dev-reflect <TICKET_ID>`)"
 
 If the user confirms, run `/dev-reflect <TICKET_ID>` immediately.
@@ -205,11 +193,15 @@ import json, os, subprocess, datetime
 
 def workspace_root():
     try:
-        g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+        g = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
     except Exception:
         g = os.getcwd()
-    p = os.path.dirname(g)
-    return p if os.path.exists(os.path.join(p, 'CLAUDE.md')) else g
+    d = g
+    while d and d != os.path.dirname(d):
+        if os.path.exists(os.path.join(d, 'CLAUDE.md')) and os.path.exists(os.path.join(d, 'config.example.sh')):
+            return d
+        d = os.path.dirname(d)
+    return g
 
 WS = workspace_root()
 os.makedirs(f'{WS}/memory/review_rounds', exist_ok=True)

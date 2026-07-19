@@ -16,15 +16,9 @@ used by `/dev`'s precondition check).
 ## Step 0 — Locate workspace root
 
 ```bash
-WS=$(python3 -c "
-import os, subprocess
-try:
-    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
-except:
-    g = os.getcwd()
-p = os.path.dirname(g)
-print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
-")
+WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
+[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 ```
 
 ---
@@ -51,7 +45,7 @@ print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 
 **If `EXISTS`:**
 ```bash
-source "$WS/config.sh"
+source "$WS/scripts/workspace-env.sh"
 echo "PROJECT_KEY=$PROJECT_KEY REPOS=$REPOS PROJECTS_SUBDIR=$PROJECTS_SUBDIR"
 ```
 Show current values. In interactive mode (not `check`), ask if the user wants to change anything;
@@ -115,8 +109,7 @@ MANIFEST="$WS/scripts/local/MANIFEST.json"
 ## Step 6 — Repos check
 
 ```bash
-source "$WS/config.sh"
-PROJECTS_PREFIX="${PROJECTS_SUBDIR:+$PROJECTS_SUBDIR/}"
+source "$WS/scripts/workspace-env.sh"
 for REPO in $REPOS; do
   if [ -d "$WS/${PROJECTS_PREFIX}$REPO/.git" ]; then
     echo "$REPO: present"
