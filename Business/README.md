@@ -41,8 +41,8 @@ treated as **authoritative** by `/manager`, `/manager-create`, and `/manager-upd
 override the generic conventions in this file, and its existing file structure (whatever it is) is
 respected as-is rather than overwritten with `context.md`/`client.md`/`credentials.md`. See "Respect
 `Business/Agent.md` when present" in `skills/manager/SKILL.md` for exactly what that means (client
-isolation, never printing secrets, and — critically — never running `git add`/`commit`/`push` from
-inside `Business/`, since it can hold sensitive data and repos for multiple clients at once).
+isolation, never printing secrets, and keeping the repo itself in sync without mixing clients in one
+commit — never letting this content land in the public `skill-charly-dev` repo).
 
 ## How folders get here
 
@@ -56,4 +56,6 @@ inside `Business/`, since it can hold sensitive data and repos for multiple clie
 This folder's real content is **gitignored** — only this README is tracked, so a fresh clone gets an
 empty `Business/` ready to populate. Versioning what you put here (one shared private repo, one repo
 per client, or nothing versioned at all) is entirely up to you — the skill never assumes a particular
-VCS layout.
+VCS layout. If it is a repo, `/manager` and siblings keep it in sync (fetch before relying on it,
+commit/push with your explicit go-ahead, scoped to one client per commit) — see "Keeping `Business/`
+in sync" in `skills/manager/SKILL.md`.
