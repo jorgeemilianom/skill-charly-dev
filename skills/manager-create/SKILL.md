@@ -64,26 +64,34 @@ whatever the user gave you, organized readably).
 
 ---
 
-## Step 2 — Optional manifest (repos and/or Jira reference)
+## Step 2 — Optional manifest (repos, Jira reference, and/or remote execution)
 
 Ask:
 > "¿Qué repos de `projects/` pertenecen a este cliente? (separados por espacio, o ninguno — si el cliente no tiene código clonado en este workspace, no aplica)"
 > "¿Tiene un project key de Jira asociado, o trabaja como épica dentro de un proyecto existente? (o ninguno)"
+> "¿Este cliente se trabaja mediante acceso remoto (SSH/VPS) en vez de (o además de) un repo local acá? (por ejemplo, un servidor de hosting compartido o una VPS del cliente)"
 
 If any answer is non-empty, offer to persist it:
-> "¿Guardo esto en `Business/<cliente>/client.md` para que `/dev` no tenga que volver a preguntar?"
+> "¿Guardo esto en `Business/<cliente>/client.md` para que `/dev` y `/manager-exec` no tengan que volver a preguntar?"
 
 If confirmed, write only the fields that apply (omit `repos:` entirely for a client with no local
 checkout, use `jira_key` for a full Jira project key or `jira_epic` for an epic inside an existing
-project):
+project, add `exec: ssh` if the client works via remote access):
 ```yaml
 ---
 repos: [<repo1>, <repo2>]     # omit if this client has no repo cloned under projects/
 jira_key: <PROJECT_KEY>       # or jira_epic: <EPIC_KEY>, whichever applies
+exec: ssh                     # omit unless this client's work happens via remote SSH/VPS access
 ---
 ```
 to `Business/<cliente>/client.md`. If declined, skip silently — this is a convenience, never a
-requirement, and `/dev-assess` will just ask again next time it meets one of these repos unmapped.
+requirement, and `/dev-assess` (or `/manager-exec`) will just ask again next time it meets this client
+unmapped.
+
+**If `exec: ssh` applies**, don't try to collect connection details here — that's a longer,
+credential-sensitive conversation. Just record the flag and point the user at it:
+> "Cuando quieras ejecutar algo ahí, `/manager exec <cliente> <tarea>` te va a pedir los datos de
+> conexión la primera vez y va a dejar el manual armado en `Business/<cliente>/Agent.md`."
 
 ---
 

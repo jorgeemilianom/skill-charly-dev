@@ -566,4 +566,7 @@ Not inlined here — each is independently invokable and has its own SKILL.md:
 
 Separate command family (not a `dev-*` sibling, no code/Jira/PR logic): `/manager`, `/manager-create`,
 `/manager-update` — manage `Business/<cliente>/` context. `/dev-assess` (Phase 0.5) delegates to
-`/manager-create` automatically the first time it meets a repo with no client association.
+`/manager-create` automatically the first time it meets a repo with no client association. The relation
+also runs the other way: `/manager`'s Phase 2 (requirement intake) delegates *into* `/dev` — which
+routes to `/dev-create` — whenever a client requirement turns out to need development; `/manager` never
+files the ticket itself.
