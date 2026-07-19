@@ -404,18 +404,60 @@ jq --argjson entry '{
 
 ### 7.2 — Save new rules (with supersede-on-write dedup)
 
-Same write path as "Capture Corrections as They Happen" in `dev/SKILL.md` — read that section for the
-full dedup logic; summarized here for the closing-mode context:
+This section is canonical for the dedup mechanism — `dev/SKILL.md`'s "Capture Corrections as They
+Happen" points back here rather than restating it, only differing in `confidence`/`source` (0.9 /
+`live_correction` there vs. 0.6 / `retrospective` here).
 
 ```bash
 jq empty $WS/memory/global_rules.json 2>/dev/null || echo '{"rules":[]}' > $WS/memory/global_rules.json
 cat $WS/memory/global_rules.json
 ```
 
-Read the current `active` rules whose `tags` overlap the new rule's tags (or are universal/untagged).
-Judge whether the new rule is: **(a)** a near-duplicate/restatement of an existing active rule, **(b)**
-a correction/refinement that supersedes one, or **(c)** genuinely new. This is a judgment call — don't
-try to script the similarity check itself.
+**Run the structured similarity pre-check below before judging — do not skip straight to "genuinely
+new."** This project's own history shows why: 18 active rules accumulated, every single one still at
+its initial 0.6 confidence, zero ever marked `superseded` — the open-ended "does this look familiar?"
+judgment call never once matched an existing rule, even when it plausibly should have. Contrast that
+with `patterns.json`'s dedup, which uses exact-string matching instead of open judgment and *has*
+reinforced entries. The fix isn't to trust the judgment harder — it's to force a concrete candidate into
+view so there's something specific to accept or reject, instead of an abstract absence to default past:
+
+```bash
+python3 -c "
+import json, re
+
+new_rule = '''<rule text derived from this cycle>'''
+tags = [<new-rule-tags-as-python-strings>]  # e.g. ['CloudHubCorp'] — empty list for a universal rule
+
+STOP = {'the','a','an','in','on','of','to','and','or','for','with','is','are','be','not','it','this'}
+def words(t):
+    return set(re.findall(r'[a-zA-Z0-9_]+', t.lower())) - STOP
+
+data = json.load(open('$WS/memory/global_rules.json'))
+new_w = words(new_rule)
+best = None
+for r in data['rules']:
+    if r.get('status') != 'active':
+        continue
+    r_tags = r.get('tags', [])
+    if r_tags and tags and not (set(r_tags) & set(tags)):
+        continue
+    overlap = len(new_w & words(r['rule'])) / max(1, len(new_w | words(r['rule'])))
+    if best is None or overlap > best[1]:
+        best = (r, overlap)
+
+if best and best[1] >= 0.25:
+    print(f\"CANDIDATE ({best[1]:.0%} word overlap) [{best[0]['id']}]: {best[0]['rule']}\")
+else:
+    print('NO CANDIDATE — proceed as genuinely new')
+"
+```
+
+If a candidate is printed, you **must** explicitly decide, for that specific rule (not in the
+abstract): is the new observation **(a)** the same thing restated, **(b)** a refinement that should
+supersede it, or **(c)** actually different despite the word overlap? Only fall through to "genuinely
+new" after explicitly ruling out the printed candidate. If no candidate was printed, append as
+genuinely new directly — the threshold (0.25) is a starting point, not a hard science; adjust it if it
+proves too loose or too strict in practice.
 
 **(a) Reinforcement** — bump the existing entry instead of duplicating:
 ```bash

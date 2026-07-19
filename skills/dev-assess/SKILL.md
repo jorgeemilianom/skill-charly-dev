@@ -20,7 +20,15 @@ This skill performs the full pre-development analysis before any code is written
 
 ## Step 0 — Parallel kickoff
 
-Run all of the following **simultaneously** before doing anything else.
+**If the ticket JSON was already fetched earlier in this same session** (e.g. `/dev`'s Entry Point A
+Step 1, right before delegating here) **reuse that response — do not call `jira-issue.py get` again.**
+This is the single most-repeated avoidable Jira round-trip in the whole skill family: a fresh `/dev
+<TICKET_ID>` start used to fetch the same ticket 3 times (once in `/dev`, twice here) before this fix.
+Only fetch fresh if this is a standalone invocation (`/dev-assess <TICKET_ID>` called directly) or the
+earlier read is no longer in context.
+
+Run the rest of the following **simultaneously** before doing anything else — #1 (or the reused JSON),
+#2, and #3 are independent:
 
 ```bash
 WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
@@ -28,8 +36,9 @@ while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.examp
 [ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 source "$WS/scripts/workspace-env.sh"
 
-# 1 — Read ticket from Jira
-uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
+# 1 — Read ticket from Jira (skip and reuse if already fetched this session — see above)
+TICKET_JSON=$(uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json)
+echo "$TICKET_JSON"
 
 # 2 — Check branch state across all sub-repos
 for REPO in $REPOS; do
@@ -48,9 +57,13 @@ jq '.patterns |= map(. + {type: (.type // "success"), frequency: (.frequency // 
 [ -f $WS/memory/tickets/<TICKET_ID>.json ] || echo '{"summary":"","decisions":[],"learnings":[]}' > $WS/memory/tickets/<TICKET_ID>.json
 [ -f $WS/memory/assessments/<TICKET_ID>.json ] && cat $WS/memory/assessments/<TICKET_ID>.json
 cat $WS/memory/tickets/<TICKET_ID>.json
+```
 
-# 4 — Extract epic key from ticket JSON (run in parallel)
-uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json 2>/dev/null | python3 -c "
+**Then**, once `TICKET_JSON` is in hand — extract the epic key from that **same** blob, no second API
+call:
+
+```bash
+echo "$TICKET_JSON" | python3 -c "
 import sys, json
 d = json.load(sys.stdin)
 epic = d.get('fields', {}).get('parent', {}).get('key') or d.get('fields', {}).get('customfield_10014')
@@ -58,7 +71,7 @@ print(epic or '')
 " 2>/dev/null
 ```
 
-**Detect affected repos now** (from the ticket title/description fetched in #1), using the keyword
+**Detect affected repos now** (from the ticket title/description already in hand), using the keyword
 table in Section A.1 below — do this as soon as the ticket JSON is available, don't wait for Section A.
 This same detection is reused as-is when execution reaches Section A.1 later; no need to redo it.
 
@@ -297,7 +310,26 @@ Surface cross-project impact if found.
 **Confidence Score**: [0.0 – 1.0]
 ```
 
-### Confidence Score
+### Confidence Score — derived, not a free estimate
+
+Do not pick this number by feel. Across this project's actual history, self-estimated confidence
+clustered at 0.85–0.97 regardless of how many open questions or concerns an assessment had — a ticket
+with 6 open questions scored *higher* than several with zero. An unanchored self-report doesn't
+discriminate risk. Compute it instead, from what Sections C's own **Assessment** and **Open questions**
+already contain by the time you reach this point:
+
+```
+score = 0.95
+      - 0.08 × (number of items in "Open questions")
+      - 0.05 × (number of ⚠️ items in "Assessment")
+score = max(score, 0.3)          # floor — don't report near-zero
+score = round(score to nearest 0.05)
+```
+
+This is intentionally mechanical: if a reviewer sees a 0.9, they can recompute it themselves by
+counting the two lists above — it's not an unaudited vibe. A clean assessment (no open questions, no
+concerns) still lands at 0.95; one with real unresolved unknowns drops fast, exactly where the
+escalation path below expects it to.
 
 | Range | Meaning |
 |-------|---------|
