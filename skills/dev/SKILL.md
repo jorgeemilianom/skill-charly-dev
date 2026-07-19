@@ -387,7 +387,7 @@ If the ticket requires simultaneous development in more than one repo, use `--wo
 claude --worktree -C projects/QuintaApp-Api/
 claude --worktree -C projects/QuintaApp-Frontend/
 ```
-Each worktree operates on an independent copy of the branch. Background agents (Ctrl+B) work normally within each session.
+Each worktree operates on an independent copy of the branch. Background agents (Ctrl+B) work normally within each session. (Codex: no direct equivalent for either — see `agent-context.md`'s Command Resolution Rules for the fallback.)
 
 ---
 
@@ -421,7 +421,7 @@ make -C projects/CloudHubCorp build   # always rebuild after any Backoffice chan
 
 Fix any failures before moving on. Do not skip or work around failing tests.
 
-Background mode for slow test suites: run with Ctrl+B and continue reviewing other files while tests run.
+Background mode for slow test suites: run with Ctrl+B and continue reviewing other files while tests run. (Codex: run sequentially instead — see `agent-context.md`.)
 
 ---
 

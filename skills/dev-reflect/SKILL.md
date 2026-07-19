@@ -16,17 +16,19 @@ Can be invoked at any moment during the ticket lifecycle. Does not require the t
 
 ## Codex execution contract
 
-This command is the canonical shared-memory writer for MSoftIA. Codex must treat it as an executable workflow, not as Claude-only documentation.
+This command is the canonical shared-memory writer for MSoftIA — Codex must treat it as an executable
+workflow, not as Claude-only documentation. Generic Claude→Codex command translations (`/rename`,
+`/recap`, `/loop`, `jq` unavailability, etc.) live centrally in `agent-context.md`'s "Command Resolution
+Rules" — not repeated here. What's specific to *this* skill:
 
 - Normalize the ticket ID to uppercase for JSON contents and canonical filenames, e.g. `MSOF-321`.
 - When matching branches, also check lowercase forms, e.g. `msof-321`.
-- Local writes under `memory/` are allowed as part of this workflow and do not require separate user confirmation.
-- Jira transitions and Jira comments affect external state. In Codex, only run those steps when the user explicitly requested `closing`, asked to close the ticket, or otherwise authorized the closing flow.
-- If a command snippet is Claude-specific, adapt it to Codex:
-  - `/rename` is a no-op.
-  - `/recap` means summarize from available context.
-  - `/loop` means one iteration unless continuous monitoring was explicitly requested.
-- If `jq` is unavailable, use Python JSON updates.
+- Local writes under `memory/` are allowed as part of this workflow and do not require separate user
+  confirmation (matches `agent-context.md`'s general memory-write rule).
+- Jira transitions and Jira comments affect external state — same general rule as `agent-context.md`'s
+  "Workspace Memory" section (ask unless the user explicitly requested the flow that includes them): in
+  Codex specifically, only run Steps 8-9 (Done transition, closing comment) when the user explicitly
+  requested `closing`, asked to close the ticket, or otherwise authorized the closing flow.
 - Do not fail the reflection because optional sources are missing. Missing PR or Jira helper failure should be recorded as `null`, empty arrays, or blockers as appropriate.
 
 ---
