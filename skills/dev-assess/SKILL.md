@@ -122,7 +122,14 @@ Feed findings into the **Memory context** section of the Technical Assessment, g
 - **`0.5 ≤ confidence < 0.8`** → present as a consideration/suggestion, not a default.
 - **`confidence < 0.4`** → omit entirely, too weak a signal to surface.
 
-Cite origin ticket when relevant: `"En MSOF-XXX se adoptó el mismo patrón y funcionó / falló porque [razón]"`. If nothing is applicable after filtering, continue silently.
+**`decisions.json` entries with `outcome: "failure"` or `score < 0.4` always go in the 🔴 Errores
+previos bucket below, never the optional 📋 one — this isn't discretionary.** `dev-reflect` computes
+that score carefully at closing time specifically so a failed approach doesn't get tried again; folding
+it into the same catch-all bucket as routine successful decisions (score shown, no distinct treatment)
+was silently discarding the one signal most worth surfacing. Higher-scoring decisions stay in 📋 as
+before, cited only when relevant.
+
+Cite origin ticket when relevant: `"En MSOF-XXX se adoptó el mismo patrón y funcionó / falló porque [razón]"`. If nothing is applicable after filtering, continue silently — except the failed-decisions rule above, which is never silent when a match exists.
 
 ---
 
@@ -295,10 +302,10 @@ Surface cross-project impact if found.
   - [repo-2]: [layers / areas affected]
   - [repo-N]: [layers / areas affected — one line per affected repo]
 **Memory context** (reglas con `confidence < 0.4` ya fueron excluidas en la lectura filtrada):
-  - 🔴 Errores previos aplicables: (omitir si no hay)
+  - 🔴 Errores previos aplicables: mistakes.json + patrones `type: error` + decisiones `failure`/`score < 0.4` (omitir solo si ninguna fuente tiene algo aplicable)
   - ⭐ Reglas de alta confianza (≥0.8) — aplicar por defecto: (omitir si no hay)
   - 🟢 Patrones / reglas a considerar (0.5–0.79): (omitir si no hay)
-  - 📋 Decisiones previas con score: (omitir si no hay)
+  - 📋 Decisiones previas con score (las de score ≥ 0.4 solamente — las de abajo del umbral ya están en 🔴): (omitir si no hay)
 **Epic context** (omitir si no hay overlap):
   - 🔵 En curso / ✅ Recientes / 🔜 Próximos
 **Assessment**:
