@@ -72,11 +72,10 @@ jq empty $WS/memory/global_rules.json 2>/dev/null || echo '{"rules":[]}' > $WS/m
 cat $WS/memory/global_rules.json
 ```
 
-Same dedup logic as `dev-reflect` Step 7.2 applies here — read the current `active` rules whose `tags`
-overlap the current repo(s)/topic (or are universal), and judge: **reinforcement** (bump `confidence`
-+`reinforced_count` on the existing entry), **supersede** (mark the old entry `status: "superseded"`
-+`superseded_by`, append the new one), or **genuinely new** (just append). The only difference from the
-closing-mode write: `confidence` starts at **`0.9`** (not `0.6`) and `source` is `"live_correction"` (not
+Same dedup logic as `dev-reflect` Step 7.2 (canonical — read it there, not restated here), **including
+its structured similarity pre-check** — run that before judging reinforcement vs. supersede vs.
+genuinely new, don't skip straight to the open-ended call. The only difference from the closing-mode
+write: `confidence` starts at **`0.9`** (not `0.6`) and `source` is `"live_correction"` (not
 `"retrospective"`) — a direct correction deserves more weight than a retrospective inference from the
 first mention.
 
