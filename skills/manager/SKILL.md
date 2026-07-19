@@ -22,6 +22,40 @@ folder-scanning logic.
 
 ---
 
+## Respect `Business/Agent.md` when present
+
+This applies across `/manager` and every sibling skill (`manager-create`, `manager-update`) — same
+cross-reference pattern as `/dev`'s shared conventions in `dev/SKILL.md`.
+
+Before doing anything else under `Business/`, check for a root manual:
+```bash
+[ -f "$WS/Business/Agent.md" ] && cat "$WS/Business/Agent.md"
+```
+
+If it exists, it is **authoritative** — its rules override anything generic in this file or its
+siblings. At minimum, expect and honor rules like:
+- Identify the client before reading secrets, running scripts, or connecting to any infrastructure.
+- Never reuse credentials, hosts, databases, or backups across clients.
+- Never print passwords, tokens, cookies, private keys, or connection strings in chat, logs, commits,
+  or responses.
+- No deploys, uploads, write SQL, service restarts, cache clears, or production changes without
+  explicit authorization.
+- **Never run `git add`, `git commit`, `git push`, or publish anything from within `Business/`** — it
+  can hold sensitive data and nested repos for multiple clients. This holds even if a step elsewhere in
+  this skill family would otherwise suggest a git operation — none of `/manager`, `/manager-create`, or
+  `/manager-update` ever commit or push inside `Business/` themselves, precisely because of this.
+
+If a specific client folder has its own manual (e.g. `Business/<cliente>/Agent.md`), that file is the
+authoritative operational manual for that client — read and follow it before applying
+`manager-create`'s generic scaffolding or `manager-update`'s generic maintenance steps to that client.
+Treat its existing files/conventions as-is; never impose `context.md`/`client.md`/`credentials.md` on
+a client that already has its own established structure.
+
+If no `Business/Agent.md` exists yet, none of this applies — proceed with the generic conventions
+below.
+
+---
+
 ## Phase 0: Locate workspace + list known clients
 
 ```bash

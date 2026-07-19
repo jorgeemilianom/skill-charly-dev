@@ -27,6 +27,16 @@ and it just asks again next time. It's never required.
 Credentials/confidential fields are never filled in through chat — `/manager-create` leaves them as a
 placeholder file for you to complete by hand outside the conversation.
 
+## `Agent.md` — if you already have an operational manual
+
+If you drop an `Agent.md` here (root) and/or inside a specific `Business/<cliente>/Agent.md`, it's
+treated as **authoritative** by `/manager`, `/manager-create`, and `/manager-update` — its rules
+override the generic conventions in this file, and its existing file structure (whatever it is) is
+respected as-is rather than overwritten with `context.md`/`client.md`/`credentials.md`. See "Respect
+`Business/Agent.md` when present" in `skills/manager/SKILL.md` for exactly what that means (client
+isolation, never printing secrets, and — critically — never running `git add`/`commit`/`push` from
+inside `Business/`, since it can hold sensitive data and repos for multiple clients at once).
+
 ## How folders get here
 
 - `/manager-create <cliente>` — bootstraps a new client folder interactively.

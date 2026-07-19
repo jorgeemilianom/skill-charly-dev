@@ -11,6 +11,9 @@ Refresh `Business/<cliente>/` for: **$ARGUMENTS**
 `$ARGUMENTS` is `<cliente>`. Nothing in this file should assume a specific client's content — it only
 reads/appends whatever's already there.
 
+Before Step 0, see "Respect `Business/Agent.md` when present" in `manager/SKILL.md` — if that file
+exists (root or per-client), it's authoritative and overrides the generic steps below.
+
 ---
 
 ## Step 0 — Preconditions
@@ -25,9 +28,15 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
+[ -f "$WS/Business/Agent.md" ] && cat "$WS/Business/Agent.md"
 CLIENTE="<\$ARGUMENTS>"
 [ -d "$WS/Business/$CLIENTE" ] && echo EXISTS || echo MISSING
+[ -f "$WS/Business/$CLIENTE/Agent.md" ] && cat "$WS/Business/$CLIENTE/Agent.md"
 ```
+
+If the client has its own `Agent.md`, its established file structure is the convention for this
+client — don't impose `context.md`/`client.md` on top of it; only touch what the user explicitly asks
+to add or change.
 
 If `MISSING`: this client has no folder yet. Say so and ask:
 > "`Business/<cliente>` no existe todavía. ¿Corro `/manager-create <cliente>` para crearlo?"
@@ -79,4 +88,5 @@ Confirm the diff/summary of what changed before writing, same as any other local
 ## Step 4 — Report
 
 Summarize what changed under `Business/<cliente>/`. Remind the user `credentials.md` (if present) was
-left untouched.
+left untouched. This skill never runs `git add`/`commit`/`push` inside `Business/` — committing/pushing
+whatever backs that folder (if anything) is the user's call, done outside this flow.
