@@ -138,7 +138,9 @@ EOF
 )"
 ```
 
-After the PR is created, capture the URL from the `gh pr create` output, then post a Jira comment automatically (no authorization needed):
+After the PR is created, capture the URL from the `gh pr create` output, then — both automatic, no
+authorization needed — post a Jira comment **and** add the PR as a structured web link (so it shows in
+the issue's Links panel, not just buried in comment text):
 
 ```bash
 WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
@@ -155,7 +157,13 @@ Archivos cambiados: N
 
 Cambios principales:
 <2-4 lines of plain text describing the changes — no bullet symbols, no markdown>"
+
+uv run $JIRA_SKILL/utility/jira-weblink.py add "<TICKET_ID>" \
+  --url "<PR_URL>" --title "PR: [$PR_PREFIX][<TICKET_ID>] <brief description>"
 ```
+
+If the weblink call fails (e.g. a duplicate from a re-run), continue silently — the comment above
+already has the URL, this is additive polish, never a blocker.
 
 Jira comment format rule: plain text only. No markdown — no **, no ##, no * or - as bullets, no backticks. Separate sections with blank lines. Use "Label: value" for structured data.
 

@@ -22,7 +22,7 @@ WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
 [ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 source "$WS/scripts/workspace-env.sh"
-uv run $JIRA_SKILL/core/jira-issue.py get "<TICKET_ID>" --json
+uv run $JIRA_SKILL/utility/jira-qa-gather.py --json "<TICKET_ID>"
 
 cat $WS/memory/snapshots/<TICKET_ID>.json 2>/dev/null
 cat $WS/memory/assessments/<TICKET_ID>.json 2>/dev/null
@@ -39,6 +39,16 @@ for REPO in $REPOS; do
   fi
 done
 ```
+
+`jira-qa-gather` returns far more than the plain ticket fields — read selectively, don't dump the whole
+response (`issue.renderedFields` especially is verbose HTML, skip it; use `issue.fields` instead):
+- `worklog_total_seconds` — real time already logged, useful context for "how far along is this."
+- `issue_links` / `web_links` — may already have the PR linked structurally (see `/dev-pr`'s weblink
+  step) even if `gh pr list` above doesn't find it (e.g. PR from a fork, or repo detection missed it).
+- `extracted_urls` — PR/commit/pipeline URLs mentioned in the ticket's prose (description/comments)
+  that a human pasted in without a formal link — catches cases the structured fields miss.
+- `siblings` — other tickets in the same project opened around the same time; only worth mentioning in
+  the resume summary if one is clearly related (same component/feature), not as a matter of course.
 
 Rename session: `/rename MSOF-XXX | <ticket summary>`
 

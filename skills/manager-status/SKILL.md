@@ -101,6 +101,48 @@ line per client:
 Close with the same advisor framing — if any client's last note is old, or has open tickets with no
 recent movement, flag it as worth a check-in rather than staying silent about it.
 
+### Cross-client reuse detection (only if 2+ clients have Jira tracking)
+
+Several MSoftIA clients already run as modules/bots inside the same CloudHubCorp multi-tenant
+framework (NorteMed, Grupo T Seguros, iBender, SoftControl, Carballo) — the same kind of request can
+plausibly come from more than one of them. For each client with `jira_epic` specifically in
+`client.md` — **not** a bare `jira_key` scoped to the whole project (that's the platform itself,
+comparing "everything" against everything else isn't a meaningful signal) — pull a handful of recent
+ticket summaries and check for overlap across *different* clients:
+
+```bash
+python3 -c "
+import json, subprocess, os
+
+WS = os.environ['WS']
+JIRA_SKILL = os.environ['JIRA_SKILL']
+clients = <dict of {cliente: jira_key or 'parent = ' + jira_epic}, built from each client.md read above>
+
+result = {}
+for cliente, jql_scope in clients.items():
+    out = subprocess.run(
+        ['uv', 'run', f'{JIRA_SKILL}/core/jira-search.py', '--json', 'query',
+         f'{jql_scope} ORDER BY updated DESC', '--max-results', '10', '--fields', 'summary'],
+        capture_output=True, text=True
+    ).stdout
+    try:
+        issues = json.loads(out)
+        result[cliente] = [i['fields']['summary'] for i in issues if i.get('fields', {}).get('summary')]
+    except Exception:
+        result[cliente] = []
+
+json.dump(result, open('/tmp/cross_client_tickets.json', 'w'))
+"
+python3 "$WS/scripts/cross_client_overlap.py" < /tmp/cross_client_tickets.json
+rm -f /tmp/cross_client_tickets.json
+```
+
+If any match comes back, add it to the multi-client overview's closing proposals — this is exactly
+the kind of "propuesta" the Business Advisor stance calls for, not a footnote: name both clients, both
+ticket summaries, and suggest confirming with each before assuming they actually want the same thing
+(word overlap is a hint to investigate, not a decision already made). No matches is the normal case,
+say nothing rather than force one.
+
 ---
 
 ## Related sibling skills

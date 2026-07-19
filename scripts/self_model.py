@@ -20,15 +20,11 @@ Usage: python3 scripts/self_model.py <path-to-memory-dir>
 """
 import json
 import os
-import re
 import sys
 from itertools import combinations
 
-STOP = {
-    'the', 'a', 'an', 'in', 'on', 'of', 'to', 'and', 'or', 'for', 'with', 'is', 'are', 'be',
-    'not', 'it', 'this', 'de', 'la', 'el', 'en', 'y', 'o', 'un', 'una', 'que', 'del', 'al',
-    'se', 'con', 'para', 'antes', 'los', 'las', 'lo', 'como', 'no',
-}
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from text_similarity import words, overlap as word_overlap  # noqa: E402
 
 CLUSTER_THRESHOLD = 0.20  # looser than the live dedup pre-check's 0.25 — retrospective, not a
                           # live accept/reject decision, so a few false groupings are cheap to
@@ -36,10 +32,6 @@ CLUSTER_THRESHOLD = 0.20  # looser than the live dedup pre-check's 0.25 — retr
                           # are the costlier failure mode here.
 MIN_DISTINCT_TICKETS = 2  # only surface clusters with real cross-ticket recurrence
 TOP_N = 3
-
-
-def words(text):
-    return set(re.findall(r'[a-zA-Z0-9_áéíóúñ]+', text.lower())) - STOP
 
 
 def load(path, default):
@@ -96,11 +88,7 @@ def main():
 
     word_sets = [words(e['text']) for e in entries]
     for i, j in combinations(range(n), 2):
-        wi, wj = word_sets[i], word_sets[j]
-        if not wi or not wj:
-            continue
-        overlap = len(wi & wj) / len(wi | wj)
-        if overlap >= CLUSTER_THRESHOLD:
+        if word_overlap(word_sets[i], word_sets[j]) >= CLUSTER_THRESHOLD:
             union(i, j)
 
     clusters = {}

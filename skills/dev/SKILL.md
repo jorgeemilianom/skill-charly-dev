@@ -132,6 +132,8 @@ Parse `$ARGUMENTS` and dispatch immediately.
 | `msof-XXX reflect` | → `/dev-reflect <TICKET_ID>` |
 | `msof-XXX status` | → `/dev-status <TICKET_ID>` |
 | `status` (no ticket ID) | → `/dev-status` |
+| `status epic <EPIC_KEY>` | → `/dev-status epic <EPIC_KEY>` |
+| `status sprint` | → `/dev-status sprint` |
 | `msof-XXX` (no subcommand) | Entry point A (below) — full core loop |
 | `db-sync <project>` | → `/dev-db-sync <project>` |
 | `msof-XXX db-sync <project>` | → `/dev-db-sync <project>` (ticket ID for context only) |

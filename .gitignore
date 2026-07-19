@@ -4,6 +4,9 @@ memory/
 scripts/local/
 .claude/settings.local.json
 
+# Python bytecode cache — generated wherever a .py script gets run, not source:
+__pycache__/
+
 # projects/ and Business/ keep their top-level folder + README tracked (so a fresh clone has
 # both ready to populate), but their real contents (repo checkouts, client data) stay private:
 projects/*

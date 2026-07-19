@@ -86,6 +86,7 @@ resolution path: when the user's intent matches one of the rows below, read the 
 | Bootstrap a new client's `Business/<cliente>/` | `skills/manager-create/SKILL.md` |
 | Refresh/maintain an existing client's `Business/<cliente>/` | `skills/manager-update/SKILL.md` |
 | Read-only client status/catch-up digest, proposals | `skills/manager-status/SKILL.md` |
+| Consolidated dev+clients digest (dev-status + manager-status merged) | `skills/manager-digest/SKILL.md` |
 | Execute a task on a client's remote infra (SSH/VPS), no local repo | `skills/manager-exec/SKILL.md` |
 | Talk through a client requirement / list known clients / route to any of the above | `skills/manager/SKILL.md` |
 
