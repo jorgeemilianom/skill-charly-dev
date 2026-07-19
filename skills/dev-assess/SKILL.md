@@ -1,6 +1,6 @@
 ---
 name: dev-assess
-description: "Technical deep dive before writing any code. Reads Jira, detects affected repos, explores the codebase with architecture-aware heuristics, loads memory/ context, produces a Technical Assessment, and — after one user confirmation — enriches the Jira ticket with structured documentation and transitions it to In Progress. Delegated to by /dev before development starts."
+description: "Technical deep dive before writing any code. Reads Jira, detects affected repos, ensures each has an associated Business/<cliente> (bootstrapping via /manager-create if missing), explores the codebase with architecture-aware heuristics, loads memory/ context, produces a Technical Assessment, and — after one user confirmation — enriches the Jira ticket with structured documentation and transitions it to In Progress. Delegated to by /dev before development starts."
 allowed-tools: Bash Read Write
 ---
 
@@ -168,6 +168,40 @@ For reference, the table used:
 | CloudHub, módulo, tenant, backoffice, Astro, PHP, m_, negocio, multi-tenant | `CloudHubCorp` |
 
 If ambiguous or the ticket mentions multiple areas → mark all relevant repos as affected.
+
+### A.1b — Business context association (generic — never hardcode a client name here)
+
+For each repo detected in A.1, check whether it already has a client folder under `Business/`. This
+is generic folder-scanning, the same regardless of which client/repo it's run for:
+
+```bash
+WS=$(python3 -c "
+import os, subprocess
+try:
+    g = subprocess.check_output(['git','rev-parse','--show-toplevel'], text=True).strip()
+except:
+    g = os.getcwd()
+p = os.path.dirname(g)
+print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
+")
+
+for REPO in <detected-repos>; do
+  # 1. Exact-name convention: Business/<repo>/
+  if [ -d "$WS/Business/$REPO" ]; then echo "MAPPED $REPO -> $REPO"; continue; fi
+  # 2. Manifest scan: any Business/*/client.md listing this repo under `repos:`
+  MATCH=$(grep -l "$REPO" $WS/Business/*/client.md 2>/dev/null | head -1)
+  if [ -n "$MATCH" ]; then echo "MAPPED $REPO -> $(basename $(dirname "$MATCH"))"; continue; fi
+  echo "UNMAPPED $REPO"
+done
+```
+
+For each `UNMAPPED` repo (skip ones already mapped):
+> "El repo `<REPO>` no tiene un cliente asociado en `Business/`. ¿A qué cliente pertenece? (uno existente o uno nuevo)"
+
+If the user answers, invoke `/manager-create <cliente> <REPO>` and wait for it to finish (it handles
+the interactive bootstrap — context, credentials placeholder, optional manifest) before resuming this
+assessment. This association is a convenience for future sessions, **never a blocker for the current
+ticket** — if the user wants to skip it for now, respect that and continue straight to A.2.
 
 ### A.2 — Read project context for each affected repo (in parallel)
 

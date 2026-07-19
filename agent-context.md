@@ -50,6 +50,18 @@ mode, `/dev-assess`).
 Imported Claude project memory index (legacy — prefer `memory/` for new learnings unless the user
 explicitly asks to update Claude memory): see `CLAUDE_MEMORY_INDEX` in `config.sh`.
 
+## Business Context (`Business/`)
+
+Separate from `memory/` above — `memory/` is ticket-level operational history, `Business/<cliente>/`
+is stable, client-level knowledge (business context, scripts, credentials, confidential info) that
+doesn't change ticket to ticket. Free-form on purpose: no required schema, the skills just read
+whatever files are present. One optional convenience file, `client.md` (front-matter `repos:` /
+`jira_key:`), lets `skills/dev-assess/SKILL.md` map `projects/` repos back to a client — it's offered,
+never required, and `/dev-assess` never blocks on its absence. Credentials are never asked in chat:
+`skills/manager-create/SKILL.md` leaves a blank placeholder file for the user to fill by hand. Only
+`Business/README.md` is tracked in git; real client content is gitignored and the skills never assume
+a particular VCS layout for it (single repo, one repo per client, or unversioned).
+
 ## Shared Skill Adapter
 
 Canonical skill sources live in `skills/`. Claude Code discovers them automatically via symlinks
@@ -71,10 +83,18 @@ resolution path: when the user's intent matches one of the rows below, read the 
 | DB migration workflow (QuintaApp-Api) | `skills/dev-migration/SKILL.md` |
 | Read-only ticket/workspace status | `skills/dev-status/SKILL.md` |
 | Pull a production DB snapshot | `skills/dev-db-sync/SKILL.md` |
+| Bootstrap a new client's `Business/<cliente>/` | `skills/manager-create/SKILL.md` |
+| Refresh/maintain an existing client's `Business/<cliente>/` | `skills/manager-update/SKILL.md` |
+| List known clients / route to the two above | `skills/manager/SKILL.md` |
 
 `skills/dev/SKILL.md` is the orchestrator: when a request doesn't clearly match one of the other
 rows, start there — it routes to the rest via its own dispatch table (including a precondition check
 that routes to `skills/dev-setup/SKILL.md` when credentials/config are missing).
+
+`skills/manager/SKILL.md` is a separate orchestrator for business-layer requests only — it never
+touches code, branches, Jira, or PRs. `skills/dev-assess/SKILL.md` delegates to
+`skills/manager-create/SKILL.md` automatically the first time it meets a repo with no client
+association under `Business/`.
 
 ### Local scripts toolbox
 

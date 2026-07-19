@@ -2,5 +2,11 @@
 config.sh
 memory/
 scripts/local/
-projects/
 .claude/settings.local.json
+
+# projects/ and Business/ keep their top-level folder + README tracked (so a fresh clone has
+# both ready to populate), but their real contents (repo checkouts, client data) stay private:
+projects/*
+!projects/README.md
+Business/*
+!Business/README.md

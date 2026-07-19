@@ -563,3 +563,7 @@ Not inlined here — each is independently invokable and has its own SKILL.md:
 - `/dev-migration` — QuintaApp-Api DB migration workflow
 - `/dev-status` — read-only ticket/workspace state
 - `/dev-db-sync` — pull a production DB snapshot
+
+Separate command family (not a `dev-*` sibling, no code/Jira/PR logic): `/manager`, `/manager-create`,
+`/manager-update` — manage `Business/<cliente>/` context. `/dev-assess` (Phase 0.5) delegates to
+`/manager-create` automatically the first time it meets a repo with no client association.

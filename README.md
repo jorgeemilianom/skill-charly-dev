@@ -87,17 +87,25 @@ routes everything else to these siblings:
 | [`/dev-status`](skills/dev-status/SKILL.md) | Read-only ticket or workspace-wide state — no side effects. |
 | [`/dev-db-sync`](skills/dev-db-sync/SKILL.md) | Pulls a production DB snapshot over SSH for local development. |
 
+Separate family — business-layer only, no code/Jira/PR logic (see [Business context](#business-context-business) below):
+
+| Skill | What it does |
+|-------|--------------|
+| [`/manager`](skills/manager/SKILL.md) | Orchestrator. Lists known clients, or routes to the skills below. |
+| [`/manager-create`](skills/manager-create/SKILL.md) | Interactive bootstrap of a new client's `Business/<cliente>/`. |
+| [`/manager-update`](skills/manager-update/SKILL.md) | Refreshes/maintains an existing client's `Business/<cliente>/`. |
+
 ---
 
 ## Repo layout
 
 This repo doubles as your workspace — clone it and it *is* the folder you work in, no separate install
 step. `skills/` is real, tracked source; `.claude/skills/<name>` are committed symlinks into it, so
-Claude Code discovers all ten skills the moment you `cd` in after `git clone`.
+Claude Code discovers all the skills the moment you `cd` in after `git clone`.
 
 ```
 skill-charly-dev/               (== your workspace, one folder, one repo)
-├── skills/<name>/SKILL.md      ← tracked, public — the 10 skills, canonical source
+├── skills/<name>/SKILL.md      ← tracked, public — canonical source for every skill
 ├── .claude/skills/<name>       ← tracked symlinks → ../../skills/<name>, for Claude discovery
 ├── scripts/
 │   ├── jira-communication/     ← tracked, vendored third-party Jira CLI (see NOTICE.md)
@@ -108,13 +116,45 @@ skill-charly-dev/               (== your workspace, one folder, one repo)
 ├── config.example.sh           ← tracked — template, copy to config.sh
 ├── config.sh                   ← gitignored — your actual values (no secrets either — see Jira below)
 ├── memory/                     ← gitignored — real ticket/decision/pattern data
-└── projects/                   ← gitignored — your actual repo checkouts
-    ├── your-api/
-    └── your-frontend/
+├── projects/                   ← only README.md tracked — your actual repo checkouts
+│   ├── your-api/
+│   └── your-frontend/
+└── Business/                   ← only README.md tracked — client context (see below)
+    └── your-client/
 ```
 
 There's no generation step and no `install.sh` — skills read `config.sh` directly at runtime
 (`source config.sh` inside the relevant bash blocks), so editing config takes effect immediately.
+
+---
+
+## Business context (`Business/`)
+
+`projects/` holds code; `Business/<cliente>/` holds everything about the client that isn't code —
+business context, scripts, credentials, confidential info. It's free-form on purpose: nothing is
+required, the skill just reads whatever files are there. One optional convenience file it does know how
+to use, `client.md`, maps `projects/` repos back to a client:
+
+```yaml
+---
+repos: [your-api, your-frontend]
+jira_key: PROJ
+---
+```
+
+`/dev-assess` offers to write it the first time it meets a repo with no client folder — decline and
+it just asks again next time, never blocking the ticket. Credentials are never typed into the chat:
+`/manager-create` leaves a blank placeholder file for you to fill by hand instead.
+
+| Skill | What it does |
+|-------|--------------|
+| `/manager-create <cliente>` | Interactive bootstrap of a new client folder. |
+| `/manager-update <cliente>` | Refresh/maintain an existing one. |
+| `/manager` | Lists known clients, or routes to the two above. |
+
+Like `projects/`, only `Business/README.md` is tracked — the real content is gitignored, and the skill
+never assumes a particular VCS layout for it (one shared private repo, one repo per client, or nothing
+versioned at all — all work the same way).
 
 ---
 
@@ -179,6 +219,9 @@ or, for an existing ticket:
 | Close the ticket | `/dev-reflect PROJ-42 closing` |
 | See all active work | `/dev-status` |
 | Pull a fresh prod DB snapshot | `/dev-db-sync <project>` |
+| Bootstrap a new client's business context | `/manager-create <cliente>` |
+| Refresh an existing client's business context | `/manager-update <cliente>` |
+| List known clients | `/manager` |
 
 ---
 
