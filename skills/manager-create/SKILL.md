@@ -15,6 +15,9 @@ are only a hint for Step 2's optional manifest, never required.
 Nothing in this file should assume a specific client's content — it only produces generic scaffolding
 and asks generic questions.
 
+Before Step 0, see "Respect `Business/Agent.md` when present" in `manager/SKILL.md` — if that file
+exists (root or per-client), it's authoritative and overrides the generic steps below.
+
 ---
 
 ## Step 0 — Preconditions
@@ -29,9 +32,11 @@ except:
 p = os.path.dirname(g)
 print(p if os.path.exists(os.path.join(p,'CLAUDE.md')) else g)
 ")
+[ -f "$WS/Business/Agent.md" ] && cat "$WS/Business/Agent.md"
 mkdir -p "$WS/Business"
 CLIENTE="<first token of \$ARGUMENTS>"
 [ -d "$WS/Business/$CLIENTE" ] && echo EXISTS || echo NEW
+[ -f "$WS/Business/$CLIENTE/Agent.md" ] && cat "$WS/Business/$CLIENTE/Agent.md"
 ```
 
 If no client name was given in `$ARGUMENTS`, ask for one before continuing.
@@ -39,7 +44,9 @@ If no client name was given in `$ARGUMENTS`, ask for one before continuing.
 If `EXISTS`: this client already has a folder. Say so and ask:
 > "`Business/<cliente>` ya existe. ¿Preferís `/manager-update <cliente>` para mantenerlo, o seguimos acá agregando lo que falte?"
 If the user wants to continue here, proceed treating existing files as a base — never overwrite a file
-that already has content without asking first.
+that already has content without asking first. If the client folder has its own `Agent.md`, treat its
+established file structure as the convention for this client — don't impose `context.md` /
+`client.md` / `credentials.md` on top of it; only add what's genuinely missing and wanted.
 
 ---
 
@@ -106,6 +113,9 @@ Summarize what was created (files written, under `Business/<cliente>/`) and remi
 - `credentials.md` needs to be filled in by hand — nothing sensitive was asked in this conversation.
 - Content here is private: `Business/` is gitignored except for its top-level `README.md` (see
   `Business/README.md`), so nothing written in this step gets committed to the public skill repo.
+- This skill never runs `git add`/`commit`/`push` inside `Business/` itself — if `Business/` is backed
+  by its own repo (single shared repo or one per client), committing/pushing that is the user's call,
+  done outside this flow.
 
 If this was invoked mid-`/dev-assess` (repo names were passed in `$ARGUMENTS`), report done and resume
 the assessment that triggered this bootstrap.
