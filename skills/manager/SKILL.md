@@ -1,6 +1,6 @@
 ---
 name: manager
-description: "Business-layer orchestrator and entry point for client requirements. Talks through a client's request grounded in Business/<cliente> context; resolves it directly if it's pure business (notes, process, manifest), delegates to /dev (which files the ticket via /dev-create) when it needs local development, or delegates to /manager-exec when it needs execution on a client's remote infrastructure (SSH/VPS). Also gives a read-only status/catch-up digest with proactive proposals (manager-status). Never creates/edits Jira tickets, code, or remote state itself. Routes to manager-create, manager-update, manager-status, or manager-exec, or lists known clients on a bare call. Use for 'manager <cliente>', 'manager create <cliente>', 'manager update <cliente>', 'manager <cliente> status', 'manager status', 'manager <cliente> exec <task>', 'manager <cliente> <requirement text>', or plain 'manager'."
+description: "Business-layer orchestrator and entry point for client requirements. Talks through a client's request grounded in Business/<cliente> context; resolves it directly if it's pure business (notes, process, manifest), delegates to /dev (which files the ticket via /dev-create) when it needs local development, or delegates to /manager-exec when it needs execution on a client's remote infrastructure (SSH/VPS). Also gives a read-only status/catch-up digest with proactive proposals (manager-status), and a consolidated dev+clients digest (manager-digest) for a weekly check-in or a scheduled routine. Never creates/edits Jira tickets, code, or remote state itself. Routes to manager-create, manager-update, manager-status, manager-exec, or manager-digest, or lists known clients on a bare call. Use for 'manager <cliente>', 'manager create <cliente>', 'manager update <cliente>', 'manager <cliente> status', 'manager status', 'manager digest', 'manager <cliente> exec <task>', 'manager <cliente> <requirement text>', or plain 'manager'."
 allowed-tools: Bash Read Write
 ---
 
@@ -23,6 +23,8 @@ generic folder-scanning logic.
 - `update <cliente>` — routes to `/manager-update`.
 - `status` (no client) or `<cliente> status` — routes to `/manager-status`: read-only catch-up digest,
   see Phase 1.
+- `digest` — routes to `/manager-digest`: one consolidated summary of dev tickets, sprint health, and
+  all clients — composed from `/dev-status` + `/manager-status`, not reimplemented.
 - `<cliente> exec <task>` — routes directly to `/manager-exec <cliente> <task>`, for clients whose work
   happens on remote infrastructure (SSH/VPS) instead of a local repo.
 - `<cliente> <free text>`, or any free text describing what a client wants — Phase 2, requirement
@@ -126,6 +128,7 @@ find "$WS/Business" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | xargs -n1 base
 | `<cliente>` (no subcommand) not matching any folder | → `/manager-create <cliente>` |
 | `status` (no client) | → `/manager-status` |
 | `<cliente> status` | → `/manager-status <cliente>` |
+| `digest` | → `/manager-digest` |
 | `<cliente> exec <task>` | → `/manager-exec <cliente> <task>` |
 | anything else — free text, with or without a leading client name | → Phase 2 (Requirement Intake) |
 
@@ -229,6 +232,8 @@ inline — no separate log needed there.
 - `/manager-create` — interactive bootstrap of a new client's `Business/<cliente>/`
 - `/manager-update` — refresh/maintain an existing one
 - `/manager-status` — read-only status/catch-up digest with proactive proposals, no writes
+- `/manager-digest` — consolidated dev+clients summary composed from `/dev-status` + `/manager-status`,
+  built to double as a scheduled routine's payload
 - `/manager-exec` — executes tasks on a client's remote infrastructure (SSH/VPS), for clients without a
   local repo under `projects/`
 

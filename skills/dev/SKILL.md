@@ -132,6 +132,8 @@ Parse `$ARGUMENTS` and dispatch immediately.
 | `proj-XXX reflect` | → `/dev-reflect <TICKET_ID>` |
 | `proj-XXX status` | → `/dev-status <TICKET_ID>` |
 | `status` (no ticket ID) | → `/dev-status` |
+| `status epic <EPIC_KEY>` | → `/dev-status epic <EPIC_KEY>` |
+| `status sprint` | → `/dev-status sprint` |
 | `proj-XXX` (no subcommand) | Entry point A (below) — full core loop |
 | `db-sync <project>` | → `/dev-db-sync <project>` |
 | `proj-XXX db-sync <project>` | → `/dev-db-sync <project>` (ticket ID for context only) |
