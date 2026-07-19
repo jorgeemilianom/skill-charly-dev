@@ -41,7 +41,7 @@ gh pr list --search "<TICKET_ID>" --json state,url,title --state all 2>/dev/null
 `worklog_total_seconds` for free, worth folding into the output line below, still no separate call for
 just the title:
 ```bash
-uv run $JIRA_SKILL/utility/jira-qa-gather.py --json "<TICKET_ID>"
+uv run $JIRA_SKILL/utility/jira-qa-gather.py --json "<TICKET_ID>" | python3 "$WS/scripts/jira_trim.py"
 ```
 Skip this call entirely when a snapshot already has the summary — this check is meant to stay fast.
 

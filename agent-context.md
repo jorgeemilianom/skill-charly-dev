@@ -149,13 +149,23 @@ Use the scripts instead of duplicating Jira credentials:
 
 `uv run <JIRA_SCRIPTS from config.sh, or scripts/jira-communication/scripts if unset>/<core|workflow>/<script>.py <command> ...`
 
-Common commands:
+Common commands — `--json` is a top-level option and must come **before** the subcommand
+(`jira-issue.py --json get <KEY>`, not `get <KEY> --json`) or the CLI rejects it:
 
-- `core/jira-issue.py get <ISSUE_KEY> --json`
-- `core/jira-search.py query "<JQL>" --json`
+- `core/jira-issue.py --json get <ISSUE_KEY>`
+- `core/jira-search.py --json query "<JQL>"`
+- `utility/jira-qa-gather.py --json <ISSUE_KEY>` — single-call aggregation (comments, worklog,
+  structured links, PR/commit URLs extracted from prose, sibling tickets) instead of several
+  separate calls; prefer this over `jira-issue.py get` when more than the bare fields are needed.
 - `workflow/jira-comment.py add <ISSUE_KEY> "<text>"`
 - `workflow/jira-transition.py do <ISSUE_KEY> "<transition>"`
 - `workflow/jira-create.py issue <PROJECT_KEY> "<summary>" -t <type> -d "<description>" --parent <EPIC_KEY>`
+
+**Pipe any `--json` output through `scripts/jira_trim.py`** before it lands in context —
+`uv run ... | python3 "$WS/scripts/jira_trim.py"`. Raw Jira API responses are 30-50% null fields,
+`self` links, and (for `qa-gather`) a duplicate HTML-rendered copy of every field; the trim strips
+all of it with no information loss. Every `--json` call site in the `dev-*` skills already does
+this — do the same for any new one.
 
 Jira base URL and project key: see `config.sh` (`JIRA_BASE_URL`, `PROJECT_KEY`). If Jira credentials
 aren't set up yet (`~/.env.jira` missing), run `skills/dev-setup/SKILL.md` first — it needs a live
