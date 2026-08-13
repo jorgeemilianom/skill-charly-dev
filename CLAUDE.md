@@ -15,6 +15,7 @@ This is the the team workspace — independent git repositories, cloned under `p
 | `projects/Client B/client-b-front/` | React/Vite | Frontend for Client B |
 | `projects/client-sync-tool/` | Node.js (CommonJS) | SAP Business One/HANA ↔ PrestaShop sync tool + web panel (client: Client E) |
 | `projects/client-landing/` | Static HTML | Landing page hosted for client Grupo T Seguros (content built by the client, the team only hosts it) |
+| `projects/base-prestashop-9.1/` | PrestaShop 9 (empty scaffold) | Internal base/starter template for future PrestaShop 9 work — not tied to a specific client yet |
 | `projects/personal-finance-app/` | Node/TS + Express + React/Vite + MySQL (Docker) | Personal finance app (single-tenant, migrated from internal-platform's `m_finances`) |
 | `projects/document-saas.example/` | Node/TS monorepo (npm workspaces) + Docker | SaaS MVP: document upload, text extraction, AI-assisted analysis and chat per document |
 
