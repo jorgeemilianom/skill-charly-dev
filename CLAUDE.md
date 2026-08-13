@@ -15,7 +15,7 @@ This is the the team workspace — independent git repositories, cloned under `p
 | `projects/Client B/client-b-front/` | React/Vite | Frontend for Client B |
 | `projects/client-sync-tool/` | Node.js (CommonJS) | SAP Business One/HANA ↔ PrestaShop sync tool + web panel (client: Client E) |
 | `projects/client-landing/` | Static HTML | Landing page hosted for client Grupo T Seguros (content built by the client, the team only hosts it) |
-| `projects/base-prestashop-9.1/` | PrestaShop 9 (empty scaffold) | Internal base/starter template for future PrestaShop 9 work — not tied to a specific client yet |
+| `projects/base-prestashop-9.1/` | PrestaShop 9.1 + Docker Compose + MySQL 8 | Internal base/starter template for future PrestaShop 9 work — not tied to a specific client yet |
 | `projects/personal-finance-app/` | Node/TS + Express + React/Vite + MySQL (Docker) | Personal finance app (single-tenant, migrated from internal-platform's `m_finances`) |
 | `projects/document-saas.example/` | Node/TS monorepo (npm workspaces) + Docker | SaaS MVP: document upload, text extraction, AI-assisted analysis and chat per document |
 
@@ -48,5 +48,6 @@ the-product, internal-platform, Client B, and Client E track work in Jira at `ht
 - **internal-platform:** `projects/internal-platform/CLAUDE.md` — `make` / `npm run` commands, multi-tenant rules, module scaffold, middleware pipeline, RepositoryAbstract reserved names, DatabaseService WHERE convention.
 - **Client B:** `projects/Client B/Agent.md`, `projects/Client B/SpecPlan.md` — backend + frontend architecture, deploy notes.
 - **client-sync-tool:** `projects/client-sync-tool/CLAUDE.md` — SAP HANA read, PrestaShop sync domains (`products`/`categories`/`orders`), dry-run vs write mode, web panel.
+- **base-prestashop-9.1:** `projects/base-prestashop-9.1/CLAUDE.md` — Docker Compose commands, port 7755, admin folder is randomized per install, `modules`/`themes`/`override`/`mails`/`translations` tracked as bind mounts.
 - **personal-finance-app:** `projects/personal-finance-app/CLAUDE.md` — Docker Compose commands, port architecture, backend/frontend structure, critical business rules (installments, monthly projection), DB tables.
 - **document-saas.example:** `projects/document-saas.example/README.md` and `1 - spec.functional.md` / `2 - spec.tecnical.md` / `3 - spec.plan.md` — setup, functional spec, technical spec, roadmap.
