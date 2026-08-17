@@ -1,5 +1,6 @@
 # Real data — never committed to this public repo (see "Self-hosted usage" in README.md):
 config.sh
+CLAUDE.local.md
 memory/
 scripts/local/
 .claude/settings.local.json

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Detect candidate cross-client feature reuse: the same kind of ask showing up for 2+ different
 clients, worth flagging as "maybe build this once as a shared internal-platform module" instead of
-bespoke work per client (several the team clients — Client C, Grupo T Seguros, Client B, the-product
-— already run as modules/bots inside the same internal-platform multi-tenant framework).
+bespoke work per client (this is the kind of signal that matters if several clients already run as
+modules/bots inside the same shared multi-tenant framework).
 
 Reads {"<cliente>": ["<ticket summary>", ...], ...} as JSON on stdin — the caller (manager-status's
 multi-client overview) is responsible for fetching each client's recent ticket summaries; this
@@ -22,7 +22,7 @@ from text_similarity import words, overlap as word_overlap  # noqa: E402
 
 THRESHOLD = 0.34  # higher than self_model.py's 0.20 — ticket summaries are short (often 3-5
                   # significant words), so a single shared generic word inflates Jaccard fast;
-                  # verified against real PROJ data, see text_similarity.py's stopword comment
+                  # verified against real production data, see text_similarity.py's stopword comment
 TOP_N = 3
 
 

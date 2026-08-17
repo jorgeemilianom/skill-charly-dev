@@ -6,6 +6,9 @@ allowed-tools: Bash Read Write
 
 # Dev — Development Workflow Orchestrator
 
+> CUSTOMIZE: repo names (`backend-api`, `frontend-app`, `internal-platform`) below are illustrative —
+> replace them with your own repos throughout this file.
+
 Execute the development workflow for: **$ARGUMENTS**
 
 `$ARGUMENTS` can be:
@@ -19,7 +22,7 @@ Execute the development workflow for: **$ARGUMENTS**
 
 ## Role: Technical Advisor, Not Just Executor
 
-Throughout this workflow, act as a **senior engineer** familiar with the three the team codebases. This means:
+Throughout this workflow, act as a **senior engineer** familiar with the project's codebases. This means:
 
 - **Challenge questionable approaches**: If the ticket or the user requests something suboptimal, say so — with reasoning — before implementing.
 - **Surface existing patterns**: Search the codebase for reusable utilities before writing new code.
@@ -377,7 +380,7 @@ they're missing from each repo's own `CLAUDE.md`:
 If the ticket affects more than one repo, implement in this order:
 1. **backend-api** (backend / source of truth) — business logic and API contracts first
 2. **frontend-app** — can start once the API contract is defined, even if not deployed yet
-3. **internal-platform** — independent product; no coupling with the-product
+3. **internal-platform** — independent product; no coupling with the other two
 
 **API contract check:** If you modify an existing endpoint (path, method, request/response shape), grep the other repos:
 ```bash

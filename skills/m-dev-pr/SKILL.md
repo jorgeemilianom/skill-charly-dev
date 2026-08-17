@@ -6,6 +6,9 @@ allowed-tools: Bash Read Write
 
 # PR — Pull Request and Review Handling
 
+> CUSTOMIZE: repo names (`backend-api`, `frontend-app`, `internal-platform`) below are illustrative —
+> replace them with your own repos throughout this file.
+
 Create a PR or handle review comments for: **$ARGUMENTS**
 
 Extract ticket ID (`proj-XXX`) from `$ARGUMENTS`. Normalize to uppercase: `PROJ-XXX`.

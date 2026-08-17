@@ -41,7 +41,7 @@ Correr una vez después de clonar, o cuando `/m-dev` reporte prerrequisitos falt
 
 ### `/m-dev-create` — de idea libre a ticket filed
 ```
-/m-dev-create agregar cancelación de reservas a the-product
+/m-dev-create agregar cancelación de reservas
 ```
 Discute el alcance, arma el spec, resuelve el epic (lista cacheada) y crea el ticket en Jira.
 
@@ -75,10 +75,10 @@ Lee commits, diffs y estado de PR en todos los repos afectados; devuelve resumen
 ```
 /m-dev-review https://github.com/org/repo/pull/42
 ```
-Revisión contra arquitectura y convenciones de the team; opcionalmente la postea en GitHub.
+Revisión contra la arquitectura y convenciones de tu equipo; opcionalmente la postea en GitHub.
 (Equivale a `/m-dev review <URL>`.)
 
-### `/m-dev-migration` — migraciones de DB (solo backend-api)
+### `/m-dev-migration` — migraciones de DB (solo el repo que las posea, ej. `backend-api`)
 ```
 /m-dev-migration PROJ-123
 ```

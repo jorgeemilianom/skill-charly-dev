@@ -16,7 +16,7 @@ Can be invoked at any moment during the ticket lifecycle. Does not require the t
 
 ## Codex execution contract
 
-This command is the canonical shared-memory writer for the team — Codex must treat it as an executable
+This command is the canonical shared-memory writer for this workspace — Codex must treat it as an executable
 workflow, not as Claude-only documentation. Generic Claude→Codex command translations (`/rename`,
 `/recap`, `/loop`, `jq` unavailability, etc.) live centrally in `agent-context.md`'s "Command Resolution
 Rules" — not repeated here. What's specific to *this* skill:

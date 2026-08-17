@@ -6,6 +6,8 @@ allowed-tools: Bash Read
 
 # Manager Status — Client Catch-Up and Advisory Digest
 
+> CUSTOMIZE: `internal-platform`, `Client A/B/C` below are illustrative example names.
+
 Status for: **$ARGUMENTS**
 
 If `$ARGUMENTS` names a client, run the single-client digest. If empty, run the multi-client overview.
@@ -103,8 +105,8 @@ recent movement, flag it as worth a check-in rather than staying silent about it
 
 ### Cross-client reuse detection (only if 2+ clients have Jira tracking)
 
-Several the team clients already run as modules/bots inside the same internal-platform multi-tenant
-framework (Client C, Grupo T Seguros, Client B, Client D, Client E) — the same kind of request can
+Several clients already run as modules/bots inside the same internal-platform multi-tenant
+framework (Client A, Client B, Client C) — the same kind of request can
 plausibly come from more than one of them. For each client with `jira_epic` specifically in
 `client.md` — **not** a bare `jira_key` scoped to the whole project (that's the platform itself,
 comparing "everything" against everything else isn't a meaningful signal) — pull a handful of recent

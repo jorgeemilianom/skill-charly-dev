@@ -6,9 +6,11 @@ allowed-tools: Bash Read Write
 
 # Manager Create — Bootstrap a New Client
 
+> CUSTOMIZE: `acme-corp`, `backend-api`, `frontend-app` below are illustrative example names.
+
 Bootstrap `Business/<cliente>/` for: **$ARGUMENTS**
 
-`$ARGUMENTS` is `<cliente>` optionally followed by one or more repo names (e.g. `the-product
+`$ARGUMENTS` is `<cliente>` optionally followed by one or more repo names (e.g. `acme-corp
 backend-api frontend-app`) when invoked from `/m-dev-assess`'s auto-bootstrap — the repo names
 are only a hint for Step 2's optional manifest, never required.
 

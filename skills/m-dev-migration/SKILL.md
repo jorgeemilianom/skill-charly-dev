@@ -6,6 +6,9 @@ allowed-tools: Bash Read Write
 
 # Dev Migration — DB Migration Workflow (backend-api only)
 
+> CUSTOMIZE: `backend-api` is an example — point every `make -C projects/backend-api ...` call in this
+> file at whichever of your repos actually owns the SQL migrations.
+
 Run the migration workflow for: **$ARGUMENTS**
 
 `$ARGUMENTS` is the ticket ID (`proj-XXX`), used for the migration filename and commit message.

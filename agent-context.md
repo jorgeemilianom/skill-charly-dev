@@ -21,7 +21,10 @@ embeds credentials, reference the helper path instead of duplicating the credent
 - Respond in Spanish by default. Keep technical terms in English when that is the natural term in the codebase.
 - Be concise. Do not repeat prior context. Explain only when it changes the decision, risk, or next step.
 - Never add a "Co-Authored-By" line to commits — only the user is the author.
-- After any change under `internal-platform/admin/`, run `make build` before considering the work done — the Astro Backoffice needs compiling for changes to take effect.
+
+> Add your own project-specific preferences here, or in `CLAUDE.local.md` if you'd rather keep this
+> file generic (e.g. a rule like "after any frontend change, run the build step before considering the
+> work done" for a project whose framework needs a compile step).
 
 ## Workspace Memory
 
@@ -80,7 +83,7 @@ resolution path: when the user's intent matches one of the rows below, read the 
 | Snapshot / closing reflection, persist learnings | `skills/m-dev-reflect/SKILL.md` |
 | Resume a ticket already in progress | `skills/m-dev-resume/SKILL.md` |
 | Review a teammate's PR ("review <PR URL>") | `skills/m-dev-review/SKILL.md` |
-| DB migration workflow (backend-api) | `skills/m-dev-migration/SKILL.md` |
+| DB migration workflow (the repo that owns your SQL migrations) | `skills/m-dev-migration/SKILL.md` |
 | Read-only ticket/workspace status | `skills/m-dev-status/SKILL.md` |
 | Pull a production DB snapshot | `skills/m-dev-db-sync/SKILL.md` |
 | Bootstrap a new client's `Business/<cliente>/` | `skills/m-manager-create/SKILL.md` |

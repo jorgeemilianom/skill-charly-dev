@@ -2,52 +2,50 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **This is an example template**, not a real workspace map — `skill-charly-dev` is a public repo, so
+> this file only shows the shape the `/m-dev-*` and `/m-manager-*` skills expect. Replace the table and
+> prose below with your own repos. If a gitignored `CLAUDE.local.md` exists next to this file, it's
+> imported automatically (see the bottom of this file) and takes precedence for your real, private
+> workspace map — that's where your actual client/project details should live, not here.
+
 ## Workspace Overview
 
-This is the the team workspace — independent git repositories, cloned under `projects/`:
+This is an example workspace — independent git repositories, cloned under `projects/`:
 
 | Project | Stack | Purpose |
 |---|---|---|
-| `projects/backend-api/` | Go 1.22 + Gin + MySQL | REST API for the-product (hexagonal architecture) |
-| `projects/frontend-app/` | React 19 + Vite + JSX | Web client for the-product |
-| `projects/internal-platform/` | PHP 8.2 + Astro 5 + React | Multi-tenant SaaS framework (separate product) |
-| `projects/Client B/client-b-back/` | Node/TS | Backend for Client B, talent discovery SaaS (client: Client B) |
-| `projects/Client B/client-b-front/` | React/Vite | Frontend for Client B |
-| `projects/client-sync-tool/` | Node.js (CommonJS) | SAP Business One/HANA ↔ PrestaShop sync tool + web panel (client: Client E) |
-| `projects/client-landing/` | Static HTML | Landing page hosted for client Grupo T Seguros (content built by the client, the team only hosts it) |
-| `projects/base-prestashop-9.1/` | PrestaShop 9.1 + Docker Compose + MySQL 8 | Internal base/starter template for future PrestaShop 9 work — not tied to a specific client yet |
-| `projects/personal-finance-app/` | Node/TS + Express + React/Vite + MySQL (Docker) | Personal finance app (single-tenant, migrated from internal-platform's `m_finances`) |
-| `projects/document-saas.example/` | Node/TS monorepo (npm workspaces) + Docker | SaaS MVP: document upload, text extraction, AI-assisted analysis and chat per document |
+| `projects/backend-api/` | e.g. Go + MySQL | REST API, hexagonal architecture, source of truth for business logic |
+| `projects/frontend-app/` | e.g. React + Vite | Web client, calls `backend-api` |
+| `projects/internal-platform/` | e.g. PHP + Astro | Separate, independent product — no coupling with the other two |
 
-Each sub-project has its own `CLAUDE.md` with detailed commands, architecture, and rules (document-saas.example currently documents itself via `README.md` and the `*.spec.*.md` files at its root instead). **Always read the sub-project docs before working in that directory.**
+Each sub-project has its own `CLAUDE.md`/`README.md` with detailed commands, architecture, and rules.
+**Always read the sub-project docs before working in that directory.**
 
 ## Project Relationships
 
-**the-product** is a rental marketplace for "quintas" (vacation properties) in San Luis, Argentina. The two the-product repos are tightly coupled:
+`backend-api` and `frontend-app` are tightly coupled: `frontend-app` calls `backend-api` via an env var
+(e.g. `VITE_API_URL`), all fetches go through a single API client module, and auth uses Bearer JWT with
+access/refresh tokens.
 
-- `backend-api` is the authoritative backend — hexagonal architecture, JWT auth, MySQL.
-- `frontend-app` calls the API via `VITE_API_URL`; all fetches go through `src/services/apiClient.js`.
-- Auth flow: frontend stores `access_token` + `refresh_token` in `localStorage`; API uses Bearer JWT with two token types (`"access"` / `"refresh"`).
-
-**internal-platform** is a separate SaaS product (multi-tenant PHP monolith). It is **not** connected to the-product — they share no code or infrastructure. It also hosts custom modules for other the team clients (Client C, Grupo T Seguros) that have no repo of their own under `projects/`.
-
-**Client B** is a talent-discovery SaaS client with its own two repos (`client-b-back`, `client-b-front`), plus a backoffice module inside internal-platform — not connected to the-product.
-
-**client-sync-tool** is a standalone sync tool for client Client E (`client-e.example.com`), unrelated to any other project in this workspace.
-
-**personal-finance-app** and **document-saas.example** are independent personal products, unrelated to the-product/internal-platform — they share no code or infrastructure with the rest of the workspace either.
+`internal-platform` is a separate product — it shares no code or infrastructure with the other two.
 
 ## Jira
 
-the-product, internal-platform, Client B, and Client E track work in Jira at `https://your-org.atlassian.net`, project key `PROJ`. Setup instructions are in `projects/backend-api/CLAUDE.md` under "Jira Integration". personal-finance-app and document-saas.example do not currently track work there.
+Projects track work in Jira — see `JIRA_BASE_URL` and `PROJECT_KEY` in `config.sh`.
 
 ## Sub-project entry points
 
-- **backend-api:** `projects/backend-api/CLAUDE.md` — commands (`make test`, `make build`, migrations), hexagonal architecture map, coverage gate (≥80%), SDD workflow.
+- **backend-api:** `projects/backend-api/CLAUDE.md` — commands (`make test`, `make build`, migrations), architecture map, coverage gate, SDD workflow.
 - **frontend-app:** `projects/frontend-app/CLAUDE.md` — scripts (`npm run dev/build/test/lint`), folder conventions, API client details, route table.
-- **internal-platform:** `projects/internal-platform/CLAUDE.md` — `make` / `npm run` commands, multi-tenant rules, module scaffold, middleware pipeline, RepositoryAbstract reserved names, DatabaseService WHERE convention.
-- **Client B:** `projects/Client B/Agent.md`, `projects/Client B/SpecPlan.md` — backend + frontend architecture, deploy notes.
-- **client-sync-tool:** `projects/client-sync-tool/CLAUDE.md` — SAP HANA read, PrestaShop sync domains (`products`/`categories`/`orders`), dry-run vs write mode, web panel.
-- **base-prestashop-9.1:** `projects/base-prestashop-9.1/CLAUDE.md` — Docker Compose commands, port 7755, admin folder is randomized per install, `modules`/`themes`/`override`/`mails`/`translations` tracked as bind mounts.
-- **personal-finance-app:** `projects/personal-finance-app/CLAUDE.md` — Docker Compose commands, port architecture, backend/frontend structure, critical business rules (installments, monthly projection), DB tables.
-- **document-saas.example:** `projects/document-saas.example/README.md` and `1 - spec.functional.md` / `2 - spec.tecnical.md` / `3 - spec.plan.md` — setup, functional spec, technical spec, roadmap.
+- **internal-platform:** `projects/internal-platform/CLAUDE.md` — build/test commands, module scaffold, project-specific conventions.
+
+---
+
+## Self-hosted usage
+
+Add as many rows/sections above as you have repos, delete what you don't need, and keep this file
+generic if you plan to keep this workspace repo public — put anything real (client names, actual
+architecture details, internal URLs) in the gitignored `CLAUDE.local.md` instead. See `README.md` for
+the full self-hosted setup.
+
+@CLAUDE.local.md

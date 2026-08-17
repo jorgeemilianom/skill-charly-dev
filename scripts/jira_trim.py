@@ -2,7 +2,7 @@
 """Strip the noise every raw Jira API response carries — null fields, `self` links, avatar URL
 sets, `expand`/`schema` metadata — none of it useful to an agent reading the ticket, all of it
 tokens. Generic: doesn't know or care about specific field names, so it doesn't need updating
-when custom fields change. Verified against real PROJ tickets: ~30-40% smaller, same information.
+when custom fields change. Verified against real production tickets: ~30-40% smaller, same information.
 
 Usage: uv run <jira-communication>/core/jira-issue.py --json get <KEY> | python3 scripts/jira_trim.py
        uv run <jira-communication>/utility/jira-qa-gather.py --json <KEY> | python3 scripts/jira_trim.py

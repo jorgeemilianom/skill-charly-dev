@@ -1,8 +1,17 @@
 # skill-charly-dev
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **From Jira ticket to merged PR — one command, full workflow. Works from Claude Code and Codex.**
 
 A set of skills that act as a senior engineer pair: reads your ticket, explores the codebase, implements the changes, runs the tests, opens the PR, handles review comments, and remembers every decision along the way. Self-hosted — this repo *is* your workspace, not something you install into one.
+
+**Who this is for:** solo developers and small teams juggling several client/product repos against a
+shared Jira, who want the ticket→PR ritual automated without handing their codebase or business
+context to a hosted service. Everything real — your repos, your Jira credentials, your client notes,
+your accumulated decisions — stays on your machine in gitignored folders (`projects/`, `Business/`,
+`memory/`, `config.sh`). Only the workflow logic itself (`skills/`) is meant to be shared; fork this
+repo, keep your fork public or private, and the private folders never leave your clone.
 
 ---
 
@@ -112,7 +121,8 @@ skill-charly-dev/               (== your workspace, one folder, one repo)
 │   └── local/                  ← gitignored — scripts the skills write for themselves over time
 ├── agent-context.md            ← tracked — shared Codex/Claude adapter (prefs, memory map, skill map)
 ├── AGENTS.md                   ← tracked — Codex-native root pointer
-├── CLAUDE.md                   ← tracked — your project map, no secrets
+├── CLAUDE.md                   ← tracked — example project map template, no secrets
+├── CLAUDE.local.md             ← gitignored — your real project map (auto-imported by CLAUDE.md)
 ├── config.example.sh           ← tracked — template, copy to config.sh
 ├── config.sh                   ← gitignored — your actual values (no secrets either — see Jira below)
 ├── memory/                     ← gitignored — real ticket/decision/pattern data
@@ -187,6 +197,10 @@ you exactly what to run), creates `projects/`, `scripts/local/`, `memory/`, and 
 configured `REPOS` still need `git clone`ing. Re-run it any time — it's idempotent and safe to use as a
 health check.
 
+Once you have real repos in place, fill in `CLAUDE.md` with your actual project map — or, if you plan to
+keep this repo public/shared, write it in a gitignored `CLAUDE.local.md` instead (already imported by
+`CLAUDE.md` via `@CLAUDE.local.md`), so your real client/architecture details never get committed.
+
 Once it reports everything OK:
 
 ```
@@ -258,7 +272,7 @@ actual secret-entry step always happens in your own terminal, never through the 
 - Jira: `uv run scripts/jira-communication/scripts/core/jira-setup.py` → writes `~/.env.jira`
 - GitHub: `gh auth login`
 
-The skills also contain **architecture rules** and **keyword-to-repo mappings** tailored as examples — look for `> CUSTOMIZE` comments in `skills/m-dev-review/SKILL.md` and `skills/m-dev-assess/SKILL.md` and replace them with your stack's conventions.
+The skills also contain **architecture rules** and **keyword-to-repo mappings** tailored as examples — look for `> CUSTOMIZE` comments across `skills/*/SKILL.md` and replace the example repo names (`backend-api`, `frontend-app`, `internal-platform`) with your stack's actual repos and conventions.
 
 ---
 

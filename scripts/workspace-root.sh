@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Resolve the the team workspace root and print it.
+# Resolve the workspace root and print it.
 #
 # The workspace root is identified by having BOTH CLAUDE.md and config.example.sh at its
 # top level — using CLAUDE.md alone is not enough, since sub-repos under projects/ (and some

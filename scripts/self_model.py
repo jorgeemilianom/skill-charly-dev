@@ -6,8 +6,8 @@ memory/user_profile.json under "self_model" (see dev-reflect Step 2.5).
 Why this exists: memory/global_rules.json, patterns.json, and decisions.json each record
 learnings independently, keyed to whichever ticket produced them. Nothing cross-references them,
 so the same underlying lesson gets rediscovered from scratch in a later ticket instead of being
-recognized as "this again" — see PROJ-171 and PROJ-134 both independently landing on "type
-dynamic backend data as `any`, not `unknown`" as if for the first time.
+recognized as "this again" — e.g. two unrelated tickets (PROJ-171 and PROJ-134) both independently
+landing on "type dynamic backend data as `any`, not `unknown`" as if for the first time.
 
 This clusters entries across the three files by word overlap (the same technique as the live
 rule-dedup pre-check in dev-reflect Step 7.2 — kept deliberately simple, not real semantic

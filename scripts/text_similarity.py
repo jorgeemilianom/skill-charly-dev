@@ -13,8 +13,8 @@ STOP = {
     'se', 'con', 'para', 'antes', 'los', 'las', 'lo', 'como', 'no',
     # Generic dev-task verbs/nouns — real noise in short text like ticket summaries: two
     # unrelated tickets sharing only "fix" or "agregar" isn't topical overlap, it's just how
-    # tickets are titled. Verified against real Jira data (PROJ) — "Fix imagenes" vs.
-    # "fix AgenteIA" matched above threshold on "fix" alone before this list was added.
+    # tickets are titled. Verified against real Jira data — two unrelated tickets like
+    # "Fix imagenes" vs. "fix AgenteIA" matched above threshold on "fix" alone before this list was added.
     'fix', 'bug', 'error', 'add', 'agregar', 'crear', 'create', 'actualizar', 'update',
     'cambiar', 'cambio', 'change', 'mejorar', 'improve', 'nuevo', 'nueva', 'new', 'modulo',
     'module', 'ajustar', 'corregir', 'revisar', 'review', 'implementar', 'implement', 'issue',

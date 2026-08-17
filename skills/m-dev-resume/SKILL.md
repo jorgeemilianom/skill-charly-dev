@@ -6,6 +6,9 @@ allowed-tools: Bash Read
 
 # Dev Resume — Reconstruct Development Context
 
+> CUSTOMIZE: repo names (`backend-api`, `frontend-app`, `internal-platform`) below are illustrative —
+> replace them with your own repos throughout this file.
+
 Resume development context for: **$ARGUMENTS**
 
 `$ARGUMENTS` is the ticket ID (`proj-XXX`).

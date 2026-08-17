@@ -6,6 +6,9 @@ allowed-tools: Bash Read Write
 
 # Dev Create — Spec and File a New Ticket
 
+> CUSTOMIZE: repo names (`backend-api`, `frontend-app`, `internal-platform`) below are illustrative —
+> replace them with your own repos throughout this file.
+
 Turn this idea into a filed Jira ticket: **$ARGUMENTS**
 
 `$ARGUMENTS` is a freeform description — there is no ticket ID yet, that's what this skill produces.

@@ -1,6 +1,6 @@
 ---
 name: m-dev-review
-description: "Reviews a teammate's GitHub pull request against the team architecture and conventions, then optionally posts the review to GitHub. Use when the user asks to review a PR URL, invokes 'review <PR URL>', or wants a code review of someone else's changes (not their own PR). Delegated to by /m-dev when the argument starts with 'review '."
+description: "Reviews a teammate's GitHub pull request against this workspace's architecture and conventions, then optionally posts the review to GitHub. Use when the user asks to review a PR URL, invokes 'review <PR URL>', or wants a code review of someone else's changes (not their own PR). Delegated to by /m-dev when the argument starts with 'review '."
 allowed-tools: Bash Read Write
 ---
 
