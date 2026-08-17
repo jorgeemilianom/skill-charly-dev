@@ -5,7 +5,7 @@ Vendored subset of the `jira-communication` skill's CLI scripts.
 - Copyright (c) 2025 Netresearch DTT GmbH
 - License: see `LICENSE-MIT` and `LICENSE-CC-BY-SA-4.0` in this directory
 
-Only `scripts/` is vendored here (the CLI tools the `dev-*` skills call via `uv run`). The
+Only `scripts/` is vendored here (the CLI tools the `m-dev-*` skills call via `uv run`). The
 documentation, references, and evals from the original skill are not included — see the source
 repository for those.
 

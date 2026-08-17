@@ -36,7 +36,7 @@ export SPECIAL_REPO_PATTERNS=""
 export SPECIAL_REPO_BASE="develop"
 
 # ── DB sync (optional) ───────────────────────
-# Repos that support the "db-sync" subcommand (dev-db-sync/SKILL.md) —
+# Repos that support the "db-sync" subcommand (m-dev-db-sync/SKILL.md) —
 # i.e. have a Makefile with backup/import targets for pulling a prod DB snapshot.
 # Leave empty to disable db-sync entirely.
 export DB_SYNC_REPOS=""
@@ -47,7 +47,7 @@ export DB_SYNC_REPOS=""
 export CLAUDE_MEMORY_INDEX=""
 
 # ── Notes ────────────────────────────────────
-# Run /dev-setup after cloning (from Claude Code or Codex, inside this repo) to
+# Run /m-dev-setup after cloning (from Claude Code or Codex, inside this repo) to
 # scaffold this file interactively instead of editing it by hand — it also checks
 # required tools, Jira credentials, GitHub auth, and that REPOS are cloned under
 # projects/. Skills read this file directly at runtime; there is no install step.

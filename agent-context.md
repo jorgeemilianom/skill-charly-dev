@@ -29,23 +29,23 @@ Shared memory for this workspace lives at:
 
 `memory/` (workspace root, next to `CLAUDE.md` — not per-repo)
 
-Files the `/dev-*` skills read and write:
+Files the `/m-dev-*` skills read and write:
 
-- `memory/user_profile.json` — communication/workflow preferences, loaded by `/dev` at the start of every ticket.
-- `memory/epics.json` — cached epic list for the project key in `config.sh`, maintained by `/dev-create` so epics aren't re-queried every session.
-- `memory/snapshots/<TICKET>.json` — checkpoints written by `/dev-reflect`, read by `/dev`, `/dev-resume`, `/dev-status`.
-- `memory/assessments/<TICKET>.json` — technical assessments written by `/dev-assess`.
-- `memory/vps-config.json` — production VPS connection settings for `/dev-db-sync`.
-- `memory/review_rounds/<TICKET>.json` — PR review history written by `/dev-pr`.
-- `memory/db-backups/` — downloaded DB snapshots from `/dev-db-sync`.
-- `memory/patterns.json`, `memory/decisions.json`, `memory/mistakes.json`, `memory/global_rules.json` — cross-ticket learnings written by `/dev-reflect`, retrieved by `/dev-assess` **filtered** by `tags` (repo names + keywords; empty `tags` = universal, always included) so a growing memory doesn't dump irrelevant history into every ticket. `global_rules.json` entries also carry `status` (`active`/`superseded`), `confidence` (`≥0.8` = apply by default, `<0.4` = omit), and `source` (`live_correction` = captured directly from a user correction, confidence `0.9`; `retrospective` = inferred at `/dev-reflect` closing, confidence `0.6`).
+- `memory/user_profile.json` — communication/workflow preferences, loaded by `/m-dev` at the start of every ticket.
+- `memory/epics.json` — cached epic list for the project key in `config.sh`, maintained by `/m-dev-create` so epics aren't re-queried every session.
+- `memory/snapshots/<TICKET>.json` — checkpoints written by `/m-dev-reflect`, read by `/m-dev`, `/m-dev-resume`, `/m-dev-status`.
+- `memory/assessments/<TICKET>.json` — technical assessments written by `/m-dev-assess`.
+- `memory/vps-config.json` — production VPS connection settings for `/m-dev-db-sync`.
+- `memory/review_rounds/<TICKET>.json` — PR review history written by `/m-dev-pr`.
+- `memory/db-backups/` — downloaded DB snapshots from `/m-dev-db-sync`.
+- `memory/patterns.json`, `memory/decisions.json`, `memory/mistakes.json`, `memory/global_rules.json` — cross-ticket learnings written by `/m-dev-reflect`, retrieved by `/m-dev-assess` **filtered** by `tags` (repo names + keywords; empty `tags` = universal, always included) so a growing memory doesn't dump irrelevant history into every ticket. `global_rules.json` entries also carry `status` (`active`/`superseded`), `confidence` (`≥0.8` = apply by default, `<0.4` = omit), and `source` (`live_correction` = captured directly from a user correction, confidence `0.9`; `retrospective` = inferred at `/m-dev-reflect` closing, confidence `0.6`).
 
 Memory writes are part of the shared workflow — both agents may update `memory/` files directly as
 local memory persistence, including capturing a live correction into `global_rules.json` the moment the
-user corrects an in-progress approach (see "Capture Corrections as They Happen" in `skills/dev/SKILL.md`
-— don't wait for `/dev-reflect` to reconstruct it retrospectively). Ask before Jira transitions or Jira
-comments unless the user explicitly requested the flow that includes them (e.g. `/dev-reflect` closing
-mode, `/dev-assess`).
+user corrects an in-progress approach (see "Capture Corrections as They Happen" in `skills/m-dev/SKILL.md`
+— don't wait for `/m-dev-reflect` to reconstruct it retrospectively). Ask before Jira transitions or Jira
+comments unless the user explicitly requested the flow that includes them (e.g. `/m-dev-reflect` closing
+mode, `/m-dev-assess`).
 
 Imported Claude project memory index (legacy — prefer `memory/` for new learnings unless the user
 explicitly asks to update Claude memory): see `CLAUDE_MEMORY_INDEX` in `config.sh`.
@@ -56,9 +56,9 @@ Separate from `memory/` above — `memory/` is ticket-level operational history,
 is stable, client-level knowledge (business context, scripts, credentials, confidential info) that
 doesn't change ticket to ticket. Free-form on purpose: no required schema, the skills just read
 whatever files are present. One optional convenience file, `client.md` (front-matter `repos:` /
-`jira_key:`), lets `skills/dev-assess/SKILL.md` map `projects/` repos back to a client — it's offered,
-never required, and `/dev-assess` never blocks on its absence. Credentials are never asked in chat:
-`skills/manager-create/SKILL.md` leaves a blank placeholder file for the user to fill by hand. Only
+`jira_key:`), lets `skills/m-dev-assess/SKILL.md` map `projects/` repos back to a client — it's offered,
+never required, and `/m-dev-assess` never blocks on its absence. Credentials are never asked in chat:
+`skills/m-manager-create/SKILL.md` leaves a blank placeholder file for the user to fill by hand. Only
 `Business/README.md` is tracked in git; real client content is gitignored and the skills never assume
 a particular VCS layout for it (single repo, one repo per client, or unversioned).
 
@@ -72,50 +72,50 @@ resolution path: when the user's intent matches one of the rows below, read the 
 
 | User intent | Skill source |
 | --- | --- |
-| First-run setup / credentials & environment health check | `skills/dev-setup/SKILL.md` |
-| Full ticket workflow (branch, develop, validate, commit, push) | `skills/dev/SKILL.md` |
-| New idea/requirement with no ticket yet — spec + file a Jira ticket | `skills/dev-create/SKILL.md` |
-| Technical deep dive / assessment before coding | `skills/dev-assess/SKILL.md` |
-| Create a PR or handle review comments | `skills/dev-pr/SKILL.md` |
-| Snapshot / closing reflection, persist learnings | `skills/dev-reflect/SKILL.md` |
-| Resume a ticket already in progress | `skills/dev-resume/SKILL.md` |
-| Review a teammate's PR ("review <PR URL>") | `skills/dev-review/SKILL.md` |
-| DB migration workflow (backend-api) | `skills/dev-migration/SKILL.md` |
-| Read-only ticket/workspace status | `skills/dev-status/SKILL.md` |
-| Pull a production DB snapshot | `skills/dev-db-sync/SKILL.md` |
-| Bootstrap a new client's `Business/<cliente>/` | `skills/manager-create/SKILL.md` |
-| Refresh/maintain an existing client's `Business/<cliente>/` | `skills/manager-update/SKILL.md` |
-| Read-only client status/catch-up digest, proposals | `skills/manager-status/SKILL.md` |
-| Consolidated dev+clients digest (dev-status + manager-status merged) | `skills/manager-digest/SKILL.md` |
-| Execute a task on a client's remote infra (SSH/VPS), no local repo | `skills/manager-exec/SKILL.md` |
-| Talk through a client requirement / list known clients / route to any of the above | `skills/manager/SKILL.md` |
+| First-run setup / credentials & environment health check | `skills/m-dev-setup/SKILL.md` |
+| Full ticket workflow (branch, develop, validate, commit, push) | `skills/m-dev/SKILL.md` |
+| New idea/requirement with no ticket yet — spec + file a Jira ticket | `skills/m-dev-create/SKILL.md` |
+| Technical deep dive / assessment before coding | `skills/m-dev-assess/SKILL.md` |
+| Create a PR or handle review comments | `skills/m-dev-pr/SKILL.md` |
+| Snapshot / closing reflection, persist learnings | `skills/m-dev-reflect/SKILL.md` |
+| Resume a ticket already in progress | `skills/m-dev-resume/SKILL.md` |
+| Review a teammate's PR ("review <PR URL>") | `skills/m-dev-review/SKILL.md` |
+| DB migration workflow (backend-api) | `skills/m-dev-migration/SKILL.md` |
+| Read-only ticket/workspace status | `skills/m-dev-status/SKILL.md` |
+| Pull a production DB snapshot | `skills/m-dev-db-sync/SKILL.md` |
+| Bootstrap a new client's `Business/<cliente>/` | `skills/m-manager-create/SKILL.md` |
+| Refresh/maintain an existing client's `Business/<cliente>/` | `skills/m-manager-update/SKILL.md` |
+| Read-only client status/catch-up digest, proposals | `skills/m-manager-status/SKILL.md` |
+| Consolidated dev+clients digest (m-dev-status + m-manager-status merged) | `skills/m-manager-digest/SKILL.md` |
+| Execute a task on a client's remote infra (SSH/VPS), no local repo | `skills/m-manager-exec/SKILL.md` |
+| Talk through a client requirement / list known clients / route to any of the above | `skills/m-manager/SKILL.md` |
 
-`skills/dev/SKILL.md` is the orchestrator: when a request doesn't clearly match one of the other
+`skills/m-dev/SKILL.md` is the orchestrator: when a request doesn't clearly match one of the other
 rows, start there — it routes to the rest via its own dispatch table (including a precondition check
-that routes to `skills/dev-setup/SKILL.md` when credentials/config are missing).
+that routes to `skills/m-dev-setup/SKILL.md` when credentials/config are missing).
 
-`skills/manager/SKILL.md` is a separate orchestrator for business-layer requests — it never creates or
+`skills/m-manager/SKILL.md` is a separate orchestrator for business-layer requests — it never creates or
 edits code, Jira tickets, or PRs itself, but its Phase 2 (requirement intake) can delegate a client
-requirement outward: to `skills/dev/SKILL.md` (which routes to `dev-create` to file the ticket) when it
-needs local development, or to `skills/manager-exec/SKILL.md` when it needs execution on a client's own
-remote infrastructure instead of a repo under `projects/`. `skills/dev-assess/SKILL.md` delegates to
-`skills/manager-create/SKILL.md` automatically the first time it meets a repo with no client
+requirement outward: to `skills/m-dev/SKILL.md` (which routes to `m-dev-create` to file the ticket) when it
+needs local development, or to `skills/m-manager-exec/SKILL.md` when it needs execution on a client's own
+remote infrastructure instead of a repo under `projects/`. `skills/m-dev-assess/SKILL.md` delegates to
+`skills/m-manager-create/SKILL.md` automatically the first time it meets a repo with no client
 association under `Business/`.
 
 ### Local scripts toolbox
 
-`scripts/local/` is a growing, gitignored, per-project toolbox the `/dev-*` skills write for
+`scripts/local/` is a growing, gitignored, per-project toolbox the `/m-dev-*` skills write for
 themselves — small scripts that replace re-deriving the same multi-step procedure (and re-spending
 tokens on it) every session. Before improvising a multi-step shell/git/gh/jq procedure, read
 `scripts/local/MANIFEST.json` — a script may already exist for it. When you find yourself deriving a
 deterministic, repeatable procedure worth keeping, write it there and register it in the manifest. Full
-convention: `skills/dev/references/local-scripting.md`.
+convention: `skills/m-dev/references/local-scripting.md`.
 
 ### Command Resolution Rules
 
-- Do not treat `/dev-*` as a literal Codex slash command. Resolve it as: read the matching
+- Do not treat `/m-dev-*` as a literal Codex slash command. Resolve it as: read the matching
   `skills/<name>/SKILL.md` and execute that workflow with the given arguments.
-- When one skill delegates to another (e.g. `/dev` → `/dev-assess`), stop the current phase and follow
+- When one skill delegates to another (e.g. `/m-dev` → `/m-dev-assess`), stop the current phase and follow
   the delegated skill's file first, exactly as it says.
 - `$ARGUMENTS` in a skill file means the arguments supplied by the user or by the parent skill's delegation.
 - Claude UI/CLI mechanics that appear across skill files have Codex fallbacks — this list is the
@@ -125,14 +125,14 @@ convention: `skills/dev/references/local-scripting.md`.
   - `/recap`: summarize from available context instead.
   - `/loop`: treat as one iteration unless continuous monitoring was explicitly requested.
   - `Task(...)` / subagent delegation: do the work locally unless the user explicitly asks for parallel delegation.
-  - `/code-review ultra` (called after PR creation in `/dev-pr`; `/ultrareview` was the old name for the
+  - `/code-review ultra` (called after PR creation in `/m-dev-pr`; `/ultrareview` was the old name for the
     same thing, now deprecated): this launches a billed, Claude-Code-only cloud review that neither
     Codex nor even a plain Claude Code agent can trigger programmatically. Perform a normal Codex
     code-review pass instead, focused on bugs, regressions, security, and tests.
-  - `Ctrl+B` (Claude Code's background-execution shortcut, used e.g. in `/dev` Phase 4 for slow test
+  - `Ctrl+B` (Claude Code's background-execution shortcut, used e.g. in `/m-dev` Phase 4 for slow test
     suites): no Codex equivalent — run the slow step sequentially, or tell the user it's running so they
     can work elsewhere while waiting.
-  - `claude --worktree -C <path>` (used in `/dev` Phase 3 for parallel multi-repo development): no
+  - `claude --worktree -C <path>` (used in `/m-dev` Phase 3 for parallel multi-repo development): no
     direct Codex flag equivalent. If simultaneous work across repos is genuinely needed, either run
     Codex sessions sequentially per repo, or set up the isolated copies yourself first with
     `git worktree add <path> <branch>` before starting Codex in each one.
@@ -164,18 +164,18 @@ Common commands — `--json` is a top-level option and must come **before** the 
 **Pipe any `--json` output through `scripts/jira_trim.py`** before it lands in context —
 `uv run ... | python3 "$WS/scripts/jira_trim.py"`. Raw Jira API responses are 30-50% null fields,
 `self` links, and (for `qa-gather`) a duplicate HTML-rendered copy of every field; the trim strips
-all of it with no information loss. Every `--json` call site in the `dev-*` skills already does
+all of it with no information loss. Every `--json` call site in the `m-dev-*` skills already does
 this — do the same for any new one.
 
 Jira base URL and project key: see `config.sh` (`JIRA_BASE_URL`, `PROJECT_KEY`). If Jira credentials
-aren't set up yet (`~/.env.jira` missing), run `skills/dev-setup/SKILL.md` first — it needs a live
+aren't set up yet (`~/.env.jira` missing), run `skills/m-dev-setup/SKILL.md` first — it needs a live
 terminal, not this agent, since the token prompt can't be automated.
 
 ## Workspace Working Rules
 
 - This workspace contains multiple repos — see `REPOS` in `config.sh`. Determine the affected repo(s) before editing — see `CLAUDE.md` for the full architecture map.
 - Repos matching `SPECIAL_REPO_PATTERNS` (in `config.sh`) use `SPECIAL_REPO_BASE` as their base branch; everything else uses `master`.
-- `/dev-db-sync` is only configured for repos listed in `DB_SYNC_REPOS` in `config.sh` (empty means disabled).
+- `/m-dev-db-sync` is only configured for repos listed in `DB_SYNC_REPOS` in `config.sh` (empty means disabled).
 
 ## Updating This Adapter
 

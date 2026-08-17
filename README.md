@@ -19,12 +19,12 @@ These skills automate all of it. You stay in charge — the agent does the groun
 ```
 you                    agent
 ─────────────────────────────────────────────────────
-/dev-create "add booking cancellation"
+/m-dev-create "add booking cancellation"
                        drafts the spec with you
                        resolves the epic (cached — no re-asking)
                        files the Jira ticket
 ─────────────────────────────────────────────────────
-/dev PROJ-42
+/m-dev PROJ-42
                        reads ticket from Jira
                        explores codebase (grep, git log, file reads)
                        loads past decisions from memory/
@@ -41,7 +41,7 @@ confirm / adjust
                        runs tests + linter
                        commits
 ─────────────────────────────────────────────────────
-/dev-pr PROJ-42
+/m-dev-pr PROJ-42
                        scans diff for issues
                        builds PR body (summary, test plan, acceptance criteria)
                        opens PR via gh
@@ -50,7 +50,7 @@ confirm / adjust
 ─────────────────────────────────────────────────────
 review comments arrive
 
-/dev https://github.com/.../pull/42
+/m-dev https://github.com/.../pull/42
                        reads every review comment
                        implements fixes
                        re-runs validation
@@ -58,7 +58,7 @@ review comments arrive
 ─────────────────────────────────────────────────────
 PR merged
 
-/dev-reflect PROJ-42 closing
+/m-dev-reflect PROJ-42 closing
                        saves learnings to memory/
                        transitions Jira to Done
                        posts closing comment
@@ -70,30 +70,30 @@ The longer you use it, the better it gets — `memory/` accumulates your project
 
 ## Skills
 
-`/dev` is the orchestrator — it runs the core loop (branch → code → tests → commit → push) itself and
+`/m-dev` is the orchestrator — it runs the core loop (branch → code → tests → commit → push) itself and
 routes everything else to these siblings:
 
 | Skill | What it does |
 |-------|--------------|
-| [`/dev-setup`](skills/dev-setup/SKILL.md) | First-run setup and environment health check: config.sh, required tools, Jira credentials, GitHub auth, repos present under `projects/`. |
-| [`/dev`](skills/dev/SKILL.md) | Orchestrator. Full core loop for a ticket ID; routes freeform ideas, PR URLs, and subcommands to the skills below. |
-| [`/dev-create`](skills/dev-create/SKILL.md) | Turns a freeform idea into a filed Jira ticket — drafts the spec with you, resolves the epic from a cached list. |
-| [`/dev-assess`](skills/dev-assess/SKILL.md) | Technical deep dive before writing any code. Produces a structured assessment with confidence score and waits for your go-ahead. |
-| [`/dev-pr`](skills/dev-pr/SKILL.md) | Creates the PR or handles incoming review comments. Builds the body, posts to Jira, runs automated review. |
-| [`/dev-reflect`](skills/dev-reflect/SKILL.md) | Saves a snapshot at any point (checkpoint) or runs a full closing reflection when the PR merges. Feeds learnings back into memory. |
-| [`/dev-resume`](skills/dev-resume/SKILL.md) | Reconstructs full context for a ticket already in progress, with a standup blurb. |
-| [`/dev-review`](skills/dev-review/SKILL.md) | Reviews a teammate's PR against your architecture and conventions. |
-| [`/dev-migration`](skills/dev-migration/SKILL.md) | DB migration workflow (check pending, create, review, run, commit). |
-| [`/dev-status`](skills/dev-status/SKILL.md) | Read-only ticket or workspace-wide state — no side effects. |
-| [`/dev-db-sync`](skills/dev-db-sync/SKILL.md) | Pulls a production DB snapshot over SSH for local development. |
+| [`/m-dev-setup`](skills/m-dev-setup/SKILL.md) | First-run setup and environment health check: config.sh, required tools, Jira credentials, GitHub auth, repos present under `projects/`. |
+| [`/m-dev`](skills/m-dev/SKILL.md) | Orchestrator. Full core loop for a ticket ID; routes freeform ideas, PR URLs, and subcommands to the skills below. |
+| [`/m-dev-create`](skills/m-dev-create/SKILL.md) | Turns a freeform idea into a filed Jira ticket — drafts the spec with you, resolves the epic from a cached list. |
+| [`/m-dev-assess`](skills/m-dev-assess/SKILL.md) | Technical deep dive before writing any code. Produces a structured assessment with confidence score and waits for your go-ahead. |
+| [`/m-dev-pr`](skills/m-dev-pr/SKILL.md) | Creates the PR or handles incoming review comments. Builds the body, posts to Jira, runs automated review. |
+| [`/m-dev-reflect`](skills/m-dev-reflect/SKILL.md) | Saves a snapshot at any point (checkpoint) or runs a full closing reflection when the PR merges. Feeds learnings back into memory. |
+| [`/m-dev-resume`](skills/m-dev-resume/SKILL.md) | Reconstructs full context for a ticket already in progress, with a standup blurb. |
+| [`/m-dev-review`](skills/m-dev-review/SKILL.md) | Reviews a teammate's PR against your architecture and conventions. |
+| [`/m-dev-migration`](skills/m-dev-migration/SKILL.md) | DB migration workflow (check pending, create, review, run, commit). |
+| [`/m-dev-status`](skills/m-dev-status/SKILL.md) | Read-only ticket or workspace-wide state — no side effects. |
+| [`/m-dev-db-sync`](skills/m-dev-db-sync/SKILL.md) | Pulls a production DB snapshot over SSH for local development. |
 
 Separate family — business-layer only, no code/Jira/PR logic (see [Business context](#business-context-business) below):
 
 | Skill | What it does |
 |-------|--------------|
-| [`/manager`](skills/manager/SKILL.md) | Orchestrator. Lists known clients, or routes to the skills below. |
-| [`/manager-create`](skills/manager-create/SKILL.md) | Interactive bootstrap of a new client's `Business/<cliente>/`. |
-| [`/manager-update`](skills/manager-update/SKILL.md) | Refreshes/maintains an existing client's `Business/<cliente>/`. |
+| [`/m-manager`](skills/m-manager/SKILL.md) | Orchestrator. Lists known clients, or routes to the skills below. |
+| [`/m-manager-create`](skills/m-manager-create/SKILL.md) | Interactive bootstrap of a new client's `Business/<cliente>/`. |
+| [`/m-manager-update`](skills/m-manager-update/SKILL.md) | Refreshes/maintains an existing client's `Business/<cliente>/`. |
 
 ---
 
@@ -142,15 +142,15 @@ jira_key: PROJ
 ---
 ```
 
-`/dev-assess` offers to write it the first time it meets a repo with no client folder — decline and
+`/m-dev-assess` offers to write it the first time it meets a repo with no client folder — decline and
 it just asks again next time, never blocking the ticket. Credentials are never typed into the chat:
-`/manager-create` leaves a blank placeholder file for you to fill by hand instead.
+`/m-manager-create` leaves a blank placeholder file for you to fill by hand instead.
 
 | Skill | What it does |
 |-------|--------------|
-| `/manager-create <cliente>` | Interactive bootstrap of a new client folder. |
-| `/manager-update <cliente>` | Refresh/maintain an existing one. |
-| `/manager` | Lists known clients, or routes to the two above. |
+| `/m-manager-create <cliente>` | Interactive bootstrap of a new client folder. |
+| `/m-manager-update <cliente>` | Refresh/maintain an existing one. |
+| `/m-manager` | Lists known clients, or routes to the two above. |
 
 Like `projects/`, only `Business/README.md` is tracked — the real content is gitignored, and the skill
 never assumes a particular VCS layout for it (one shared private repo, one repo per client, or nothing
@@ -178,7 +178,7 @@ cd ~/skills/charly-dev
 Then, in Claude Code or Codex, from inside the repo:
 
 ```
-/dev-setup
+/m-dev-setup
 ```
 
 This scaffolds `config.sh` interactively (Jira project key, repos, base branches — no secrets), checks
@@ -190,17 +190,17 @@ health check.
 Once it reports everything OK:
 
 ```
-/dev-create "short description of what you want to build"
+/m-dev-create "short description of what you want to build"
 ```
 
 or, for an existing ticket:
 
 ```
-/dev PROJ-42
+/m-dev PROJ-42
 ```
 
-`/dev` also runs this same precondition check itself before every ticket, and offers to run
-`/dev-setup` if something's missing — you don't have to remember to run it first.
+`/m-dev` also runs this same precondition check itself before every ticket, and offers to run
+`/m-dev-setup` if something's missing — you don't have to remember to run it first.
 
 ---
 
@@ -208,20 +208,20 @@ or, for an existing ticket:
 
 | Situation | Command |
 |-----------|---------|
-| First clone, or credentials/config check | `/dev-setup` |
-| Spec + file a new ticket | `/dev-create "<idea>"` |
-| Start a new ticket | `/dev PROJ-42` |
-| Resume after a break | `/dev-resume PROJ-42` |
-| Check ticket state | `/dev-status PROJ-42` |
-| Create the PR | `/dev-pr PROJ-42` |
-| Fix review comments | `/dev https://github.com/.../pull/42` |
-| Review a teammate's PR | `/dev-review https://github.com/.../pull/42` |
-| Close the ticket | `/dev-reflect PROJ-42 closing` |
-| See all active work | `/dev-status` |
-| Pull a fresh prod DB snapshot | `/dev-db-sync <project>` |
-| Bootstrap a new client's business context | `/manager-create <cliente>` |
-| Refresh an existing client's business context | `/manager-update <cliente>` |
-| List known clients | `/manager` |
+| First clone, or credentials/config check | `/m-dev-setup` |
+| Spec + file a new ticket | `/m-dev-create "<idea>"` |
+| Start a new ticket | `/m-dev PROJ-42` |
+| Resume after a break | `/m-dev-resume PROJ-42` |
+| Check ticket state | `/m-dev-status PROJ-42` |
+| Create the PR | `/m-dev-pr PROJ-42` |
+| Fix review comments | `/m-dev https://github.com/.../pull/42` |
+| Review a teammate's PR | `/m-dev-review https://github.com/.../pull/42` |
+| Close the ticket | `/m-dev-reflect PROJ-42 closing` |
+| See all active work | `/m-dev-status` |
+| Pull a fresh prod DB snapshot | `/m-dev-db-sync <project>` |
+| Bootstrap a new client's business context | `/m-manager-create <cliente>` |
+| Refresh an existing client's business context | `/m-manager-update <cliente>` |
+| List known clients | `/m-manager` |
 
 ---
 
@@ -247,18 +247,18 @@ skill invocation picks it up.
 | `PROJECTS_SUBDIR` | Subfolder repos live under | `projects` |
 | `SPECIAL_REPO_PATTERNS` | Repos (glob patterns) with a non-standard base branch | `frontend-app legacy-*` |
 | `SPECIAL_REPO_BASE` | Their base branch | `develop` |
-| `DB_SYNC_REPOS` | Repos supporting `/dev-db-sync` — leave empty to disable | `backend-api` |
+| `DB_SYNC_REPOS` | Repos supporting `/m-dev-db-sync` — leave empty to disable | `backend-api` |
 | `CLAUDE_MEMORY_INDEX` | Path to this project's Claude auto-memory `MEMORY.md`, surfaced to Codex as a legacy fallback | `~/.claude/projects/<escaped-path>/memory/MEMORY.md` |
 
-`/dev-setup` scaffolds and asks for all of these interactively — editing by hand is only needed to
+`/m-dev-setup` scaffolds and asks for all of these interactively — editing by hand is only needed to
 change a value later.
 
-Jira and GitHub credentials are **not** in `config.sh` — `/dev-setup` walks you through both, but the
+Jira and GitHub credentials are **not** in `config.sh` — `/m-dev-setup` walks you through both, but the
 actual secret-entry step always happens in your own terminal, never through the agent:
 - Jira: `uv run scripts/jira-communication/scripts/core/jira-setup.py` → writes `~/.env.jira`
 - GitHub: `gh auth login`
 
-The skills also contain **architecture rules** and **keyword-to-repo mappings** tailored as examples — look for `> CUSTOMIZE` comments in `skills/dev-review/SKILL.md` and `skills/dev-assess/SKILL.md` and replace them with your stack's conventions.
+The skills also contain **architecture rules** and **keyword-to-repo mappings** tailored as examples — look for `> CUSTOMIZE` comments in `skills/m-dev-review/SKILL.md` and `skills/m-dev-assess/SKILL.md` and replace them with your stack's conventions.
 
 ---
 
@@ -270,4 +270,4 @@ The skills also contain **architecture rules** and **keyword-to-repo mappings** 
 | [`gh`](https://cli.github.com/) | `brew install gh` / `apt install gh` |
 | [`uv`](https://github.com/astral-sh/uv) | `curl -Ls https://astral.sh/uv/install.sh \| sh` |
 
-`/dev-setup` checks both `gh` and `uv` are on `PATH` and tells you if either is missing.
+`/m-dev-setup` checks both `gh` and `uv` are on `PATH` and tells you if either is missing.
