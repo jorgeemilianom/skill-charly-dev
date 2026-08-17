@@ -1,51 +1,52 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Este archivo le da contexto a Claude Code (claude.ai/code) para trabajar en este repositorio.
 
-> **This is an example template**, not a real workspace map — `skill-charly-dev` is a public repo, so
-> this file only shows the shape the `/m-dev-*` and `/m-manager-*` skills expect. Replace the table and
-> prose below with your own repos. If a gitignored `CLAUDE.local.md` exists next to this file, it's
-> imported automatically (see the bottom of this file) and takes precedence for your real, private
-> workspace map — that's where your actual client/project details should live, not here.
+> **Esto es una plantilla de ejemplo**, no un mapa de workspace real — `skill-charly-dev` es un repo
+> público, así que este archivo solo muestra la forma que esperan las skills `/m-dev-*` y
+> `/m-manager-*`. Reemplazá la tabla y el texto de abajo con tus propios repos. Si existe un
+> `CLAUDE.local.md` gitignored al lado de este archivo, se importa automáticamente (ver el final de
+> este archivo) y tiene precedencia para tu mapa de workspace real y privado — ahí es donde deberían
+> vivir tus detalles reales de cliente/proyecto, no acá.
 
-## Workspace Overview
+## Vista general del workspace
 
-This is an example workspace — independent git repositories, cloned under `projects/`:
+Este es un workspace de ejemplo — repositorios git independientes, clonados bajo `projects/`:
 
-| Project | Stack | Purpose |
+| Proyecto | Stack | Propósito |
 |---|---|---|
-| `projects/backend-api/` | e.g. Go + MySQL | REST API, hexagonal architecture, source of truth for business logic |
-| `projects/frontend-app/` | e.g. React + Vite | Web client, calls `backend-api` |
-| `projects/internal-platform/` | e.g. PHP + Astro | Separate, independent product — no coupling with the other two |
+| `projects/backend-api/` | ej. Go + MySQL | API REST, arquitectura hexagonal, fuente de verdad de la lógica de negocio |
+| `projects/frontend-app/` | ej. React + Vite | Cliente web, llama a `backend-api` |
+| `projects/internal-platform/` | ej. PHP + Astro | Producto separado e independiente — sin acoplamiento con los otros dos |
 
-Each sub-project has its own `CLAUDE.md`/`README.md` with detailed commands, architecture, and rules.
-**Always read the sub-project docs before working in that directory.**
+Cada sub-proyecto tiene su propio `CLAUDE.md`/`README.md` con comandos, arquitectura y reglas detalladas.
+**Siempre leé los docs del sub-proyecto antes de trabajar en ese directorio.**
 
-## Project Relationships
+## Relaciones entre proyectos
 
-`backend-api` and `frontend-app` are tightly coupled: `frontend-app` calls `backend-api` via an env var
-(e.g. `VITE_API_URL`), all fetches go through a single API client module, and auth uses Bearer JWT with
-access/refresh tokens.
+`backend-api` y `frontend-app` están fuertemente acoplados: `frontend-app` llama a `backend-api` vía una
+variable de entorno (ej. `VITE_API_URL`), todos los fetches pasan por un único módulo de cliente API, y
+la autenticación usa Bearer JWT con tokens de access/refresh.
 
-`internal-platform` is a separate product — it shares no code or infrastructure with the other two.
+`internal-platform` es un producto separado — no comparte código ni infraestructura con los otros dos.
 
 ## Jira
 
-Projects track work in Jira — see `JIRA_BASE_URL` and `PROJECT_KEY` in `config.sh`.
+Los proyectos trackean el trabajo en Jira — ver `JIRA_BASE_URL` y `PROJECT_KEY` en `config.sh`.
 
-## Sub-project entry points
+## Puntos de entrada de cada sub-proyecto
 
-- **backend-api:** `projects/backend-api/CLAUDE.md` — commands (`make test`, `make build`, migrations), architecture map, coverage gate, SDD workflow.
-- **frontend-app:** `projects/frontend-app/CLAUDE.md` — scripts (`npm run dev/build/test/lint`), folder conventions, API client details, route table.
-- **internal-platform:** `projects/internal-platform/CLAUDE.md` — build/test commands, module scaffold, project-specific conventions.
+- **backend-api:** `projects/backend-api/CLAUDE.md` — comandos (`make test`, `make build`, migraciones), mapa de arquitectura, coverage gate, workflow SDD.
+- **frontend-app:** `projects/frontend-app/CLAUDE.md` — scripts (`npm run dev/build/test/lint`), convenciones de carpetas, detalles del cliente API, tabla de rutas.
+- **internal-platform:** `projects/internal-platform/CLAUDE.md` — comandos de build/test, scaffold de módulos, convenciones específicas del proyecto.
 
 ---
 
-## Self-hosted usage
+## Uso self-hosted
 
-Add as many rows/sections above as you have repos, delete what you don't need, and keep this file
-generic if you plan to keep this workspace repo public — put anything real (client names, actual
-architecture details, internal URLs) in the gitignored `CLAUDE.local.md` instead. See `README.md` for
-the full self-hosted setup.
+Agregá tantas filas/secciones como repos tengas arriba, borrá lo que no necesites, y mantené este
+archivo genérico si pensás mantener público este repo de workspace — poné lo real (nombres de cliente,
+detalles de arquitectura reales, URLs internas) en el `CLAUDE.local.md` gitignored en su lugar. Ver
+`README.md` para el setup self-hosted completo.
 
 @CLAUDE.local.md

@@ -1,9 +1,9 @@
 # projects/
 
-Your actual repo checkouts go here, one subfolder per repo listed in `REPOS` (see `config.sh`), e.g.
-`projects/backend-api/`.
+Tus checkouts de repos reales van acá, una subcarpeta por cada repo listado en `REPOS` (ver
+`config.sh`), ej. `projects/backend-api/`.
 
-This folder's real content is gitignored — only this README is tracked, so a fresh clone gets an empty
-`projects/` ready for `/m-dev-setup` (or a manual `git clone`) to populate.
+El contenido real de esta carpeta es gitignored — solo este README está trackeado, así que un clone
+nuevo obtiene un `projects/` vacío, listo para que `/m-dev-setup` (o un `git clone` manual) lo pueble.
 
-See `Business/README.md` for the client-context counterpart to this folder.
+Ver `Business/README.md` para la contraparte de contexto de cliente de esta carpeta.

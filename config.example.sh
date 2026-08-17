@@ -1,53 +1,53 @@
 #!/usr/bin/env bash
-# charly-dev — project configuration
-# Copy this file to config.sh and fill in your values.
-# config.sh is gitignored — never commit it.
+# charly-dev — configuración del proyecto
+# Copiá este archivo a config.sh y completá tus valores.
+# config.sh es gitignored — nunca lo commitees.
 
 # ── Jira ─────────────────────────────────────
-# Path to the jira-communication scripts directory.
-# Leave empty to use the copy vendored in this repo (scripts/jira-communication),
-# resolved directly at runtime by each skill. Only set this to point at your own
-# separate jira-communication installation instead.
+# Path al directorio de scripts de jira-communication.
+# Dejar vacío para usar la copia vendoreada en este repo (scripts/jira-communication),
+# resuelta directamente en runtime por cada skill. Setear esto solo si querés apuntar
+# a tu propia instalación separada de jira-communication.
 export JIRA_SCRIPTS=""
 
-# Jira project key (uppercase). Used in issue IDs and search queries.
+# Project key de Jira (mayúsculas). Usado en los IDs de issue y en las búsquedas.
 export PROJECT_KEY="PROJ"
 
-# Lowercase version (used in branch name patterns like feature/proj-42)
+# Versión en minúsculas (usada en patrones de nombre de rama como feature/proj-42)
 export PROJECT_KEY_LOWER="proj"
 
-# Your Jira base URL (no trailing slash)
+# Tu URL base de Jira (sin barra final)
 export JIRA_BASE_URL="https://your-org.atlassian.net"
 
-# ── Repositories ─────────────────────────────
-# Space-separated list of repo directory names, in implementation order
-# (first = most foundational / backend, last = most independent)
+# ── Repositorios ─────────────────────────────
+# Lista de nombres de directorio de repos, separados por espacio, en orden de
+# implementación (primero = más fundacional / backend, último = más independiente)
 export REPOS="backend-api frontend-app"
 
-# Subfolder (relative to the workspace root) that repos live under, e.g. "projects"
-# if you clone repos into <workspace>/projects/<repo> instead of <workspace>/<repo>
-# directly. Leave empty for the flat layout (repos as direct children of the root).
+# Subcarpeta (relativa a la raíz del workspace) donde viven los repos, ej. "projects"
+# si clonás los repos en <workspace>/projects/<repo> en vez de <workspace>/<repo>
+# directamente. Dejar vacío para el layout plano (repos como hijos directos de la raíz).
 export PROJECTS_SUBDIR=""
 
-# If some repos use a non-standard base branch (e.g. "develop" instead of "master"),
-# list them here as space-separated glob patterns (exact names or trailing "*").
-# Leave empty if all repos use "master".
+# Si algunos repos usan una rama base no estándar (ej. "develop" en vez de "master"),
+# listalos acá como patrones glob separados por espacio (nombres exactos o con "*" al final).
+# Dejar vacío si todos los repos usan "master".
 export SPECIAL_REPO_PATTERNS=""
 export SPECIAL_REPO_BASE="develop"
 
-# ── DB sync (optional) ───────────────────────
-# Repos that support the "db-sync" subcommand (m-dev-db-sync/SKILL.md) —
-# i.e. have a Makefile with backup/import targets for pulling a prod DB snapshot.
-# Leave empty to disable db-sync entirely.
+# ── Sync de DB (opcional) ─────────────────────
+# Repos que soportan el subcomando "db-sync" (m-dev-db-sync/SKILL.md) —
+# es decir, tienen un Makefile con targets de backup/import para traer un snapshot de prod.
+# Dejar vacío para deshabilitar db-sync por completo.
 export DB_SYNC_REPOS=""
 
-# ── Cross-tool adapter (optional) ────────────
-# Path to this project's Claude Code auto-memory index (~/.claude/projects/<escaped-path>/memory/MEMORY.md).
-# Referenced from agent-context.md as a legacy fallback so Codex can see it too. Leave empty to omit.
+# ── Adaptador cross-tool (opcional) ───────────
+# Path al índice de auto-memoria de Claude Code de este proyecto (~/.claude/projects/<escaped-path>/memory/MEMORY.md).
+# Referenciado desde agent-context.md como fallback legacy para que Codex también lo pueda ver. Dejar vacío para omitir.
 export CLAUDE_MEMORY_INDEX=""
 
-# ── Notes ────────────────────────────────────
-# Run /m-dev-setup after cloning (from Claude Code or Codex, inside this repo) to
-# scaffold this file interactively instead of editing it by hand — it also checks
-# required tools, Jira credentials, GitHub auth, and that REPOS are cloned under
-# projects/. Skills read this file directly at runtime; there is no install step.
+# ── Notas ────────────────────────────────────
+# Correr /m-dev-setup después de clonar (desde Claude Code o Codex, dentro de este repo) para
+# scaffoldear este archivo interactivamente en vez de editarlo a mano — también chequea
+# herramientas requeridas, credenciales de Jira, auth de GitHub, y que los REPOS estén clonados bajo
+# projects/. Las skills leen este archivo directamente en runtime; no hay paso de instalación.

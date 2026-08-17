@@ -2,286 +2,294 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**From Jira ticket to merged PR — one command, full workflow. Works from Claude Code and Codex.**
+**Del ticket de Jira al PR mergeado — un solo comando, workflow completo. Funciona desde Claude Code y Codex.**
 
-A set of skills that act as a senior engineer pair: reads your ticket, explores the codebase, implements the changes, runs the tests, opens the PR, handles review comments, and remembers every decision along the way. Self-hosted — this repo *is* your workspace, not something you install into one.
+Un conjunto de skills que actúan como un par senior: lee tu ticket, explora el codebase, implementa los cambios, corre los tests, abre el PR, maneja los comentarios de revisión, y recuerda cada decisión en el camino. Self-hosted — este repo *es* tu workspace, no algo que se instala dentro de uno.
 
-**Who this is for:** solo developers and small teams juggling several client/product repos against a
-shared Jira, who want the ticket→PR ritual automated without handing their codebase or business
-context to a hosted service. Everything real — your repos, your Jira credentials, your client notes,
-your accumulated decisions — stays on your machine in gitignored folders (`projects/`, `Business/`,
-`memory/`, `config.sh`). Only the workflow logic itself (`skills/`) is meant to be shared; fork this
-repo, keep your fork public or private, and the private folders never leave your clone.
-
----
-
-## The problem
-
-Every ticket follows the same ritual: read the ticket, find the files, remember the architecture, create the branch, write code, run tests, write the PR description, handle review comments, transition Jira... It's slow, repetitive, and full of context switching.
-
-These skills automate all of it. You stay in charge — the agent does the groundwork.
+**Para quién es esto:** developers solos y equipos chicos que manejan varios repos de clientes/productos
+contra un Jira compartido, y quieren automatizar el ritual ticket→PR sin entregarle su codebase o
+contexto de negocio a un servicio hosteado. Todo lo real — tus repos, tus credenciales de Jira, tus
+notas de cliente, tus decisiones acumuladas — se queda en tu máquina, en carpetas gitignoreadas
+(`projects/`, `Business/`, `memory/`, `config.sh`). Solo la lógica del workflow (`skills/`) está pensada
+para compartirse; forkeá este repo, mantené tu fork público o privado, y las carpetas privadas nunca
+salen de tu clone.
 
 ---
 
-## How it works
+## El problema
+
+Todo ticket sigue el mismo ritual: leer el ticket, encontrar los archivos, recordar la arquitectura, crear la rama, escribir código, correr tests, escribir la descripción del PR, manejar comentarios de revisión, transicionar Jira... Es lento, repetitivo, y lleno de cambios de contexto.
+
+Estas skills automatizan todo eso. Vos seguís al mando — el agente hace el trabajo de base.
+
+---
+
+## Cómo funciona
 
 ```
-you                    agent
+vos                    agente
 ─────────────────────────────────────────────────────
-/m-dev-create "add booking cancellation"
-                       drafts the spec with you
-                       resolves the epic (cached — no re-asking)
-                       files the Jira ticket
+/m-dev-create "agregar cancelación de reservas"
+                       arma el spec con vos
+                       resuelve el epic (cacheado — no vuelve a preguntar)
+                       crea el ticket en Jira
 ─────────────────────────────────────────────────────
 /m-dev PROJ-42
-                       reads ticket from Jira
-                       explores codebase (grep, git log, file reads)
-                       loads past decisions from memory/
+                       lee el ticket de Jira
+                       explora el codebase (grep, git log, lectura de archivos)
+                       carga decisiones pasadas desde memory/
                        ─────────────────────────────
                        Technical Assessment
-                         · approach proposed
-                         · files affected
-                         · risks flagged
+                         · enfoque propuesto
+                         · archivos afectados
+                         · riesgos marcados
                          · confidence score
                        ─────────────────────────────
-confirm / adjust
-                       creates branch
-                       implements changes
-                       runs tests + linter
-                       commits
+confirmás / ajustás
+                       crea la rama
+                       implementa los cambios
+                       corre tests + linter
+                       commitea
 ─────────────────────────────────────────────────────
 /m-dev-pr PROJ-42
-                       scans diff for issues
-                       builds PR body (summary, test plan, acceptance criteria)
-                       opens PR via gh
-                       posts link to Jira
-                       runs automated review
+                       escanea el diff en busca de problemas
+                       arma el cuerpo del PR (resumen, plan de test, criterios de aceptación)
+                       abre el PR vía gh
+                       postea el link en Jira
+                       corre revisión automatizada
 ─────────────────────────────────────────────────────
-review comments arrive
+llegan comentarios de revisión
 
 /m-dev https://github.com/.../pull/42
-                       reads every review comment
-                       implements fixes
-                       re-runs validation
-                       commits + asks to push
+                       lee cada comentario de revisión
+                       implementa los fixes
+                       vuelve a correr la validación
+                       commitea + pide confirmación para el push
 ─────────────────────────────────────────────────────
-PR merged
+PR mergeado
 
 /m-dev-reflect PROJ-42 closing
-                       saves learnings to memory/
-                       transitions Jira to Done
-                       posts closing comment
+                       guarda aprendizajes en memory/
+                       transiciona Jira a Done
+                       postea comentario de cierre
 ```
 
-The longer you use it, the better it gets — `memory/` accumulates your project's decisions, recurring mistakes, and patterns across tickets.
+Cuanto más lo usás, mejor se pone — `memory/` va acumulando las decisiones de tu proyecto, los errores recurrentes y los patrones a través de los tickets.
 
 ---
 
 ## Skills
 
-`/m-dev` is the orchestrator — it runs the core loop (branch → code → tests → commit → push) itself and
-routes everything else to these siblings:
+`/m-dev` es el orquestador — corre el loop principal (rama → código → tests → commit → push) por sí
+mismo y rutea todo lo demás a estos skills hermanos:
 
-| Skill | What it does |
+| Skill | Qué hace |
 |-------|--------------|
-| [`/m-dev-setup`](skills/m-dev-setup/SKILL.md) | First-run setup and environment health check: config.sh, required tools, Jira credentials, GitHub auth, repos present under `projects/`. |
-| [`/m-dev`](skills/m-dev/SKILL.md) | Orchestrator. Full core loop for a ticket ID; routes freeform ideas, PR URLs, and subcommands to the skills below. |
-| [`/m-dev-create`](skills/m-dev-create/SKILL.md) | Turns a freeform idea into a filed Jira ticket — drafts the spec with you, resolves the epic from a cached list. |
-| [`/m-dev-assess`](skills/m-dev-assess/SKILL.md) | Technical deep dive before writing any code. Produces a structured assessment with confidence score and waits for your go-ahead. |
-| [`/m-dev-pr`](skills/m-dev-pr/SKILL.md) | Creates the PR or handles incoming review comments. Builds the body, posts to Jira, runs automated review. |
-| [`/m-dev-reflect`](skills/m-dev-reflect/SKILL.md) | Saves a snapshot at any point (checkpoint) or runs a full closing reflection when the PR merges. Feeds learnings back into memory. |
-| [`/m-dev-resume`](skills/m-dev-resume/SKILL.md) | Reconstructs full context for a ticket already in progress, with a standup blurb. |
-| [`/m-dev-review`](skills/m-dev-review/SKILL.md) | Reviews a teammate's PR against your architecture and conventions. |
-| [`/m-dev-migration`](skills/m-dev-migration/SKILL.md) | DB migration workflow (check pending, create, review, run, commit). |
-| [`/m-dev-status`](skills/m-dev-status/SKILL.md) | Read-only ticket or workspace-wide state — no side effects. |
-| [`/m-dev-db-sync`](skills/m-dev-db-sync/SKILL.md) | Pulls a production DB snapshot over SSH for local development. |
+| [`/m-dev-setup`](skills/m-dev-setup/SKILL.md) | Setup inicial y health check del entorno: config.sh, herramientas requeridas, credenciales de Jira, auth de GitHub, repos presentes bajo `projects/`. |
+| [`/m-dev`](skills/m-dev/SKILL.md) | Orquestador. Loop completo para un ticket ID; rutea ideas libres, URLs de PR, y subcomandos a los skills de abajo. |
+| [`/m-dev-create`](skills/m-dev-create/SKILL.md) | Convierte una idea libre en un ticket de Jira filed — arma el spec con vos, resuelve el epic desde una lista cacheada. |
+| [`/m-dev-assess`](skills/m-dev-assess/SKILL.md) | Deep dive técnico antes de escribir código. Produce un assessment estructurado con confidence score y espera tu confirmación. |
+| [`/m-dev-pr`](skills/m-dev-pr/SKILL.md) | Crea el PR o maneja comentarios de revisión entrantes. Arma el cuerpo, postea en Jira, corre revisión automatizada. |
+| [`/m-dev-reflect`](skills/m-dev-reflect/SKILL.md) | Guarda un snapshot en cualquier momento (checkpoint) o corre una reflexión de cierre completa cuando el PR mergea. Alimenta memory con los aprendizajes. |
+| [`/m-dev-resume`](skills/m-dev-resume/SKILL.md) | Reconstruye el contexto completo de un ticket ya en curso, con un blurb para el standup. |
+| [`/m-dev-review`](skills/m-dev-review/SKILL.md) | Revisa el PR de un compañero contra tu arquitectura y convenciones. |
+| [`/m-dev-migration`](skills/m-dev-migration/SKILL.md) | Workflow de migración de DB (chequear pendientes, crear, revisar, correr, commitear). |
+| [`/m-dev-status`](skills/m-dev-status/SKILL.md) | Estado de solo lectura de un ticket o de todo el workspace — sin efectos secundarios. |
+| [`/m-dev-db-sync`](skills/m-dev-db-sync/SKILL.md) | Trae un snapshot de la DB de producción por SSH para desarrollo local. |
 
-Separate family — business-layer only, no code/Jira/PR logic (see [Business context](#business-context-business) below):
+Familia separada — solo capa de negocio, sin lógica de código/Jira/PR (ver [Contexto de negocio](#contexto-de-negocio-business) abajo):
 
-| Skill | What it does |
+| Skill | Qué hace |
 |-------|--------------|
-| [`/m-manager`](skills/m-manager/SKILL.md) | Orchestrator. Lists known clients, or routes to the skills below. |
-| [`/m-manager-create`](skills/m-manager-create/SKILL.md) | Interactive bootstrap of a new client's `Business/<cliente>/`. |
-| [`/m-manager-update`](skills/m-manager-update/SKILL.md) | Refreshes/maintains an existing client's `Business/<cliente>/`. |
+| [`/m-manager`](skills/m-manager/SKILL.md) | Orquestador. Lista los clientes conocidos, o rutea a los skills de abajo. |
+| [`/m-manager-create`](skills/m-manager-create/SKILL.md) | Bootstrap interactivo de `Business/<cliente>/` para un cliente nuevo. |
+| [`/m-manager-update`](skills/m-manager-update/SKILL.md) | Refresca/mantiene el `Business/<cliente>/` de un cliente existente. |
 
 ---
 
-## Repo layout
+## Estructura del repo
 
-This repo doubles as your workspace — clone it and it *is* the folder you work in, no separate install
-step. `skills/` is real, tracked source; `.claude/skills/<name>` are committed symlinks into it, so
-Claude Code discovers all the skills the moment you `cd` in after `git clone`.
+Este repo duplica como tu workspace — lo clonás y *es* la carpeta en la que trabajás, sin un paso de
+instalación separado. `skills/` es la fuente real, trackeada; `.claude/skills/<name>` son symlinks
+commiteados que apuntan ahí, así que Claude Code descubre todas las skills apenas hacés `cd` después del
+`git clone`.
 
 ```
-skill-charly-dev/               (== your workspace, one folder, one repo)
-├── skills/<name>/SKILL.md      ← tracked, public — canonical source for every skill
-├── .claude/skills/<name>       ← tracked symlinks → ../../skills/<name>, for Claude discovery
+skill-charly-dev/               (== tu workspace, una carpeta, un repo)
+├── skills/<name>/SKILL.md      ← trackeado, público — fuente canónica de cada skill
+├── .claude/skills/<name>       ← symlinks trackeados → ../../skills/<name>, para que Claude los descubra
 ├── scripts/
-│   ├── jira-communication/     ← tracked, vendored third-party Jira CLI (see NOTICE.md)
-│   └── local/                  ← gitignored — scripts the skills write for themselves over time
-├── agent-context.md            ← tracked — shared Codex/Claude adapter (prefs, memory map, skill map)
-├── AGENTS.md                   ← tracked — Codex-native root pointer
-├── CLAUDE.md                   ← tracked — example project map template, no secrets
-├── CLAUDE.local.md             ← gitignored — your real project map (auto-imported by CLAUDE.md)
-├── config.example.sh           ← tracked — template, copy to config.sh
-├── config.sh                   ← gitignored — your actual values (no secrets either — see Jira below)
-├── memory/                     ← gitignored — real ticket/decision/pattern data
-├── projects/                   ← only README.md tracked — your actual repo checkouts
-│   ├── your-api/
-│   └── your-frontend/
-└── Business/                   ← only README.md tracked — client context (see below)
-    └── your-client/
+│   ├── jira-communication/     ← trackeado, CLI de Jira de terceros vendoreado (ver NOTICE.md)
+│   └── local/                  ← gitignored — scripts que las skills se escriben a sí mismas con el tiempo
+├── agent-context.md            ← trackeado — adaptador compartido Codex/Claude (preferencias, mapa de memoria, mapa de skills)
+├── AGENTS.md                   ← trackeado — puntero raíz nativo de Codex
+├── CLAUDE.md                   ← trackeado — plantilla de ejemplo de mapa de proyecto, sin secretos
+├── CLAUDE.local.md             ← gitignored — tu mapa de proyecto real (importado automáticamente por CLAUDE.md)
+├── config.example.sh           ← trackeado — plantilla, copiar a config.sh
+├── config.sh                   ← gitignored — tus valores reales (tampoco tiene secretos — ver Jira abajo)
+├── memory/                     ← gitignored — datos reales de tickets/decisiones/patrones
+├── projects/                   ← solo README.md trackeado — tus checkouts de repos reales
+│   ├── tu-api/
+│   └── tu-frontend/
+└── Business/                   ← solo README.md trackeado — contexto de cliente (ver abajo)
+    └── tu-cliente/
 ```
 
-There's no generation step and no `install.sh` — skills read `config.sh` directly at runtime
-(`source config.sh` inside the relevant bash blocks), so editing config takes effect immediately.
+No hay paso de generación ni `install.sh` — las skills leen `config.sh` directamente en runtime
+(`source config.sh` dentro de los bloques bash correspondientes), así que editar la config tiene efecto
+inmediato.
 
 ---
 
-## Business context (`Business/`)
+## Contexto de negocio (`Business/`)
 
-`projects/` holds code; `Business/<cliente>/` holds everything about the client that isn't code —
-business context, scripts, credentials, confidential info. It's free-form on purpose: nothing is
-required, the skill just reads whatever files are there. One optional convenience file it does know how
-to use, `client.md`, maps `projects/` repos back to a client:
+`projects/` guarda código; `Business/<cliente>/` guarda todo lo del cliente que no es código —
+contexto de negocio, scripts, credenciales, información confidencial. Es free-form a propósito: nada es
+obligatorio, la skill simplemente lee los archivos que haya ahí. Un archivo de conveniencia opcional que
+sí sabe usar, `client.md`, mapea los repos de `projects/` de vuelta a un cliente:
 
 ```yaml
 ---
-repos: [your-api, your-frontend]
+repos: [tu-api, tu-frontend]
 jira_key: PROJ
 ---
 ```
 
-`/m-dev-assess` offers to write it the first time it meets a repo with no client folder — decline and
-it just asks again next time, never blocking the ticket. Credentials are never typed into the chat:
-`/m-manager-create` leaves a blank placeholder file for you to fill by hand instead.
+`/m-dev-assess` ofrece escribirlo la primera vez que se encuentra con un repo sin carpeta de cliente —
+declinás y simplemente vuelve a preguntar la próxima vez, nunca bloquea el ticket. Las credenciales
+nunca se tipean en el chat: `/m-manager-create` deja un archivo placeholder en blanco para que lo
+completes a mano.
 
-| Skill | What it does |
+| Skill | Qué hace |
 |-------|--------------|
-| `/m-manager-create <cliente>` | Interactive bootstrap of a new client folder. |
-| `/m-manager-update <cliente>` | Refresh/maintain an existing one. |
-| `/m-manager` | Lists known clients, or routes to the two above. |
+| `/m-manager-create <cliente>` | Bootstrap interactivo de una carpeta de cliente nueva. |
+| `/m-manager-update <cliente>` | Refresca/mantiene una existente. |
+| `/m-manager` | Lista los clientes conocidos, o rutea a los dos de arriba. |
 
-Like `projects/`, only `Business/README.md` is tracked — the real content is gitignored, and the skill
-never assumes a particular VCS layout for it (one shared private repo, one repo per client, or nothing
-versioned at all — all work the same way).
+Igual que `projects/`, solo `Business/README.md` está trackeado — el contenido real es gitignored, y la
+skill nunca asume un layout de VCS en particular para eso (un repo privado compartido, un repo por
+cliente, o nada versionado — todo funciona igual).
 
 ---
 
 ## Cross-tool: Claude Code + Codex
 
-Claude Code auto-discovers the symlinked skills the moment you're in the repo — no config needed.
-Codex has no reliable cross-version skills-directory auto-discovery, so `AGENTS.md` (which Codex always
-reads) points to `agent-context.md`, which tells it exactly which `skills/<name>/SKILL.md` to read for a
-given request, and where to find `config.sh` for project-specific values.
+Claude Code descubre automáticamente las skills symlinkeadas apenas estás dentro del repo — sin config
+necesaria. Codex no tiene un auto-discovery de directorio de skills confiable entre versiones, así que
+`AGENTS.md` (que Codex siempre lee) apunta a `agent-context.md`, que le indica exactamente qué
+`skills/<name>/SKILL.md` leer para un pedido dado, y dónde encontrar `config.sh` para los valores
+específicos del proyecto.
 
 ---
 
-## Quick start
+## Inicio rápido
 
 ```bash
-# 1. clone — this repo becomes your workspace
+# 1. cloná — este repo se convierte en tu workspace
 git clone https://github.com/jorgeemilianom/skill-charly-dev.git ~/skills/charly-dev
 cd ~/skills/charly-dev
 ```
 
-Then, in Claude Code or Codex, from inside the repo:
+Después, en Claude Code o Codex, desde dentro del repo:
 
 ```
 /m-dev-setup
 ```
 
-This scaffolds `config.sh` interactively (Jira project key, repos, base branches — no secrets), checks
-`gh`/`uv` are installed, checks Jira credentials and GitHub auth (both need a real terminal — it'll tell
-you exactly what to run), creates `projects/`, `scripts/local/`, `memory/`, and reports which of your
-configured `REPOS` still need `git clone`ing. Re-run it any time — it's idempotent and safe to use as a
-health check.
+Esto scaffoldea `config.sh` interactivamente (project key de Jira, repos, ramas base — sin secretos),
+chequea que `gh`/`uv` estén instalados, chequea credenciales de Jira y auth de GitHub (ambos necesitan
+una terminal real — te va a decir exactamente qué correr), crea `projects/`, `scripts/local/`,
+`memory/`, y reporta cuáles de tus `REPOS` configurados todavía necesitan `git clone`. Volvé a correrlo
+cuando quieras — es idempotente y seguro de usar como health check.
 
-Once you have real repos in place, fill in `CLAUDE.md` with your actual project map — or, if you plan to
-keep this repo public/shared, write it in a gitignored `CLAUDE.local.md` instead (already imported by
-`CLAUDE.md` via `@CLAUDE.local.md`), so your real client/architecture details never get committed.
+Una vez que tengas repos reales en su lugar, completá `CLAUDE.md` con tu mapa de proyecto real — o, si
+pensás mantener este repo público/compartido, escribilo en un `CLAUDE.local.md` gitignored en su lugar
+(ya importado por `CLAUDE.md` vía `@CLAUDE.local.md`), así tus detalles reales de cliente/arquitectura
+nunca se commitean.
 
-Once it reports everything OK:
+Una vez que reporte todo OK:
 
 ```
-/m-dev-create "short description of what you want to build"
+/m-dev-create "descripción corta de lo que querés construir"
 ```
 
-or, for an existing ticket:
+o, para un ticket existente:
 
 ```
 /m-dev PROJ-42
 ```
 
-`/m-dev` also runs this same precondition check itself before every ticket, and offers to run
-`/m-dev-setup` if something's missing — you don't have to remember to run it first.
+`/m-dev` también corre este mismo chequeo de precondiciones por su cuenta antes de cada ticket, y
+ofrece correr `/m-dev-setup` si falta algo — no tenés que acordarte de correrlo primero.
 
 ---
 
-## Common commands
+## Comandos comunes
 
-| Situation | Command |
+| Situación | Comando |
 |-----------|---------|
-| First clone, or credentials/config check | `/m-dev-setup` |
-| Spec + file a new ticket | `/m-dev-create "<idea>"` |
-| Start a new ticket | `/m-dev PROJ-42` |
-| Resume after a break | `/m-dev-resume PROJ-42` |
-| Check ticket state | `/m-dev-status PROJ-42` |
-| Create the PR | `/m-dev-pr PROJ-42` |
-| Fix review comments | `/m-dev https://github.com/.../pull/42` |
-| Review a teammate's PR | `/m-dev-review https://github.com/.../pull/42` |
-| Close the ticket | `/m-dev-reflect PROJ-42 closing` |
-| See all active work | `/m-dev-status` |
-| Pull a fresh prod DB snapshot | `/m-dev-db-sync <project>` |
-| Bootstrap a new client's business context | `/m-manager-create <cliente>` |
-| Refresh an existing client's business context | `/m-manager-update <cliente>` |
-| List known clients | `/m-manager` |
+| Primer clone, o chequeo de credenciales/config | `/m-dev-setup` |
+| Spec + crear un ticket nuevo | `/m-dev-create "<idea>"` |
+| Empezar un ticket nuevo | `/m-dev PROJ-42` |
+| Retomar después de una pausa | `/m-dev-resume PROJ-42` |
+| Chequear el estado de un ticket | `/m-dev-status PROJ-42` |
+| Crear el PR | `/m-dev-pr PROJ-42` |
+| Arreglar comentarios de revisión | `/m-dev https://github.com/.../pull/42` |
+| Revisar el PR de un compañero | `/m-dev-review https://github.com/.../pull/42` |
+| Cerrar el ticket | `/m-dev-reflect PROJ-42 closing` |
+| Ver todo el trabajo activo | `/m-dev-status` |
+| Traer un snapshot fresco de la DB de producción | `/m-dev-db-sync <proyecto>` |
+| Bootstrap del contexto de negocio de un cliente nuevo | `/m-manager-create <cliente>` |
+| Refrescar el contexto de negocio de un cliente existente | `/m-manager-update <cliente>` |
+| Listar clientes conocidos | `/m-manager` |
 
 ---
 
-## Configuration
+## Configuración
 
-Everything project-specific lives in `config.sh` (gitignored — never committed, though it holds no
-secrets either; Jira/GitHub credentials live outside this repo, see below).
+Todo lo específico del proyecto vive en `config.sh` (gitignored — nunca commiteado, aunque tampoco
+tiene secretos; las credenciales de Jira/GitHub viven fuera de este repo, ver abajo).
 
 ```bash
 cp config.example.sh config.sh
 ```
 
-Skills `source` this file directly at runtime, so there's no regeneration step — edit it and the next
-skill invocation picks it up.
+Las skills hacen `source` de este archivo directamente en runtime, así que no hay paso de
+regeneración — lo editás y la próxima invocación de una skill lo toma.
 
-| Variable | Description | Example |
+| Variable | Descripción | Ejemplo |
 |----------|-------------|---------|
-| `JIRA_SCRIPTS` | Path to Jira CLI scripts. Leave empty to use the copy vendored in this repo | `/path/to/your-own/jira-communication/scripts` |
-| `PROJECT_KEY` | Jira project key (uppercase) | `PROJ` |
-| `PROJECT_KEY_LOWER` | Same, lowercase (branch names) | `proj` |
-| `JIRA_BASE_URL` | Your Jira instance URL | `https://your-org.atlassian.net` |
-| `REPOS` | Repo directories, space-separated | `backend-api frontend-app` |
-| `PROJECTS_SUBDIR` | Subfolder repos live under | `projects` |
-| `SPECIAL_REPO_PATTERNS` | Repos (glob patterns) with a non-standard base branch | `frontend-app legacy-*` |
-| `SPECIAL_REPO_BASE` | Their base branch | `develop` |
-| `DB_SYNC_REPOS` | Repos supporting `/m-dev-db-sync` — leave empty to disable | `backend-api` |
-| `CLAUDE_MEMORY_INDEX` | Path to this project's Claude auto-memory `MEMORY.md`, surfaced to Codex as a legacy fallback | `~/.claude/projects/<escaped-path>/memory/MEMORY.md` |
+| `JIRA_SCRIPTS` | Path a los scripts del CLI de Jira. Dejar vacío para usar la copia vendoreada en este repo | `/path/to/your-own/jira-communication/scripts` |
+| `PROJECT_KEY` | Project key de Jira (mayúsculas) | `PROJ` |
+| `PROJECT_KEY_LOWER` | Lo mismo, en minúsculas (nombres de rama) | `proj` |
+| `JIRA_BASE_URL` | URL de tu instancia de Jira | `https://your-org.atlassian.net` |
+| `REPOS` | Directorios de repos, separados por espacio | `backend-api frontend-app` |
+| `PROJECTS_SUBDIR` | Subcarpeta donde viven los repos | `projects` |
+| `SPECIAL_REPO_PATTERNS` | Repos (patrones glob) con una rama base no estándar | `frontend-app legacy-*` |
+| `SPECIAL_REPO_BASE` | Su rama base | `develop` |
+| `DB_SYNC_REPOS` | Repos que soportan `/m-dev-db-sync` — dejar vacío para deshabilitar | `backend-api` |
+| `CLAUDE_MEMORY_INDEX` | Path al `MEMORY.md` de auto-memoria de Claude para este proyecto, expuesto a Codex como fallback legacy | `~/.claude/projects/<escaped-path>/memory/MEMORY.md` |
 
-`/m-dev-setup` scaffolds and asks for all of these interactively — editing by hand is only needed to
-change a value later.
+`/m-dev-setup` scaffoldea y pregunta todo esto interactivamente — editar a mano solo hace falta para
+cambiar un valor después.
 
-Jira and GitHub credentials are **not** in `config.sh` — `/m-dev-setup` walks you through both, but the
-actual secret-entry step always happens in your own terminal, never through the agent:
-- Jira: `uv run scripts/jira-communication/scripts/core/jira-setup.py` → writes `~/.env.jira`
+Las credenciales de Jira y GitHub **no** están en `config.sh` — `/m-dev-setup` te guía por ambas, pero
+el paso real de ingresar el secreto siempre pasa en tu propia terminal, nunca a través del agente:
+- Jira: `uv run scripts/jira-communication/scripts/core/jira-setup.py` → escribe `~/.env.jira`
 - GitHub: `gh auth login`
 
-The skills also contain **architecture rules** and **keyword-to-repo mappings** tailored as examples — look for `> CUSTOMIZE` comments across `skills/*/SKILL.md` and replace the example repo names (`backend-api`, `frontend-app`, `internal-platform`) with your stack's actual repos and conventions.
+Las skills también contienen **reglas de arquitectura** y **mapeos de keyword a repo** hechos como
+ejemplo — buscá los comentarios `> CUSTOMIZE` en `skills/*/SKILL.md` y reemplazá los nombres de repo de
+ejemplo (`backend-api`, `frontend-app`, `internal-platform`) por tus repos y convenciones reales.
 
 ---
 
-## Requirements
+## Requisitos
 
-| Tool | Install |
+| Herramienta | Instalación |
 |------|---------|
-| [Claude Code](https://claude.ai/code) and/or [Codex CLI](https://developers.openai.com/codex) | see docs |
+| [Claude Code](https://claude.ai/code) y/o [Codex CLI](https://developers.openai.com/codex) | ver docs |
 | [`gh`](https://cli.github.com/) | `brew install gh` / `apt install gh` |
 | [`uv`](https://github.com/astral-sh/uv) | `curl -Ls https://astral.sh/uv/install.sh \| sh` |
 
-`/m-dev-setup` checks both `gh` and `uv` are on `PATH` and tells you if either is missing.
+`/m-dev-setup` chequea que tanto `gh` como `uv` estén en el `PATH` y te avisa si falta alguno.

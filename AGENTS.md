@@ -1,25 +1,26 @@
 # AGENTS.md
 
-This workspace uses a shared adapter so Codex and Claude Code load the same project context.
+Este workspace usa un adaptador compartido para que Codex y Claude Code carguen el mismo contexto de
+proyecto.
 
-## Required Startup Context
+## Contexto de arranque obligatorio
 
-Before doing project work, read:
+Antes de hacer trabajo de proyecto, leer:
 
 1. `agent-context.md`
 2. `CLAUDE.md`
-3. The local `AGENTS.md` and/or `CLAUDE.md` inside the affected repo subfolder, if present.
+3. El `AGENTS.md` y/o `CLAUDE.md` local dentro de la subcarpeta del repo afectado, si existe.
 
-The adapter maps Claude memories, Claude skills, and project conventions into Codex-readable
-instructions without copying secrets.
+El adaptador mapea las memorias de Claude, las skills de Claude, y las convenciones del proyecto a
+instrucciones legibles por Codex sin copiar secretos.
 
-## Scope
+## Alcance
 
-This file applies at the workspace root. Repo-local `AGENTS.md` files override or extend these rules
-inside their own subtrees.
+Este archivo aplica en la raíz del workspace. Los `AGENTS.md` locales de cada repo sobreescriben o
+extienden estas reglas dentro de sus propios subárboles.
 
-## Safety
+## Seguridad
 
-Do not duplicate credentials from `~/.claude` or `~/.codex`. Use helper scripts by path when needed.
-Preserve user changes in dirty worktrees, and ask before destructive commands, pushes, or external
-state changes unless already authorized in the current conversation.
+No duplicar credenciales de `~/.claude` o `~/.codex`. Usar scripts helper por path cuando haga falta.
+Preservar los cambios del usuario en worktrees sucios, y preguntar antes de comandos destructivos,
+pushes, o cambios de estado externo salvo que ya estén autorizados en la conversación actual.
