@@ -49,6 +49,7 @@ Archivos que las skills `/m-dev-*` leen y escriben:
 - `memory/assessments/<TICKET>.json` — assessments técnicos escritos por `/m-dev-assess`.
 - `memory/vps-config.json` — configuración de conexión a la VPS de producción para `/m-dev-db-sync`.
 - `memory/review_rounds/<TICKET>.json` — historial de revisiones de PR escrito por `/m-dev-pr`.
+- `memory/infra/` — `/m-infra-clean`: `inventory.json` (hosts derivados de `Business/`, sin secretos), `runs/<alias>/` (corridas crudas redactadas + hallazgos JSON, últimas 12), `last-run.json` (resumen que lee `/m-manager-digest`).
 - `memory/db-backups/` — snapshots de DB descargados desde `/m-dev-db-sync`.
 - `memory/patterns.json`, `memory/decisions.json`, `memory/mistakes.json`, `memory/global_rules.json` — aprendizajes cross-ticket escritos por `/m-dev-reflect`, recuperados por `/m-dev-assess` **filtrados** por `tags` (nombres de repo + keywords; `tags` vacío = universal, siempre incluido) para que una memoria creciente no vuelque historial irrelevante en cada ticket. Las entradas de `global_rules.json` también llevan `status` (`active`/`superseded`), `confidence` (`≥0.8` = aplicar por defecto, `<0.4` = omitir), y `source` (`live_correction` = capturada directamente de una corrección del usuario, confidence `0.9`; `retrospective` = inferida al cierre de `/m-dev-reflect`, confidence `0.6`).
 
@@ -105,6 +106,7 @@ correspondiente y ejecutar ese workflow con los argumentos del usuario como `$AR
 | Digest de solo lectura de estado/catch-up de cliente, propuestas | `skills/m-manager-status/SKILL.md` |
 | Digest consolidado dev+clientes (fusión de m-dev-status + m-manager-status) | `skills/m-manager-digest/SKILL.md` |
 | Ejecutar una tarea en la infraestructura remota de un cliente (SSH/VPS), sin repo local | `skills/m-manager-exec/SKILL.md` |
+| Mantenimiento de la infra registrada: auditoría de logs/accesos/anomalías/vulnerabilidades/backups, fixes con OK, cron de relevamiento | `skills/m-infra-clean/SKILL.md` |
 | Conversar un requerimiento de cliente / listar clientes conocidos / rutear a cualquiera de las anteriores | `skills/m-manager/SKILL.md` |
 
 `skills/m-dev/SKILL.md` es el orquestador: cuando un pedido no matchea claramente ninguna de las otras

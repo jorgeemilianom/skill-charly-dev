@@ -104,6 +104,7 @@ Familia separada — solo capa de negocio, sin lógica de código/Jira/PR (ver [
 | [`/m-manager`](skills/m-manager/SKILL.md) | Orquestador. Lista los clientes conocidos, o rutea a los skills de abajo. |
 | [`/m-manager-create`](skills/m-manager-create/SKILL.md) | Bootstrap interactivo de `Business/<cliente>/` para un cliente nuevo. |
 | [`/m-manager-update`](skills/m-manager-update/SKILL.md) | Refresca/mantiene el `Business/<cliente>/` de un cliente existente. |
+| [`/m-infra-clean`](skills/m-infra-clean/SKILL.md) | Mantenimiento de la infra registrada en `Business/`: auditoría de solo lectura (logs, accesos, anomalías, vulnerabilidades, backups de DB), reporte fechado, fixes solo con OK explícito y solo en infra que mantenés, tickets para lo alto, y cron semanal de relevamiento que levanta `/m-manager-digest`. |
 
 ---
 
@@ -241,6 +242,7 @@ ofrece correr `/m-dev-setup` si falta algo — no tenés que acordarte de correr
 | Traer un snapshot fresco de la DB de producción | `/m-dev-db-sync <proyecto>` |
 | Bootstrap del contexto de negocio de un cliente nuevo | `/m-manager-create <cliente>` |
 | Refrescar el contexto de negocio de un cliente existente | `/m-manager-update <cliente>` |
+| Mantenimiento/auditoría de servidores registrados | `/m-infra-clean [<alias>\|<cliente>\|all]` |
 | Listar clientes conocidos | `/m-manager` |
 
 ---

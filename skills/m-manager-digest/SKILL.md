@@ -35,6 +35,16 @@ instructions as written:
 If any one fails (e.g. no active sprint, a client has no Jira tracking), that's an expected, normal
 outcome for that section, not a reason to abort the whole digest — continue with the rest.
 
+Also read the latest infra sweep, if `/m-infra-clean` has run (by its weekly cron or by hand) — no
+SSH from here, just the stored summary:
+
+```bash
+F="$WS/memory/infra/last-run.json"
+[ -f "$F" ] && cat "$F" || echo "sin relevamiento de infra"
+```
+
+A host whose `collected_at` is older than 8 days counts as a finding too (the cron stopped running).
+
 ## Step 2 — Merge into one digest
 
 ```
@@ -51,6 +61,11 @@ bien sin nada que decidir.>
 ### Clientes
 <de /m-manager-status: solo los que tienen algo que decir — nota vieja, ticket estancado, o propuesta
 de reuso cross-cliente. No repetir la lista completa de clientes si la mayoría está tranquila.>
+
+### Infra
+<de memory/infra/last-run.json: solo hosts con hallazgos `alta` o relevamiento viejo (> 8 días), una
+línea por host. Si todo está limpio, "Infra sin alertas (relevamiento del <fecha>)". Para el detalle,
+`/m-infra-clean <alias>`.>
 
 ### Propuestas
 <consolidar cualquier propuesta de negocio (de /m-manager-status) y cualquier riesgo técnico (de
