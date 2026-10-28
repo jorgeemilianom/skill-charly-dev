@@ -2,8 +2,9 @@
 
 Este archivo es el adaptador compartido entre Claude Code y Codex para este workspace. Tratalo como el
 punto de entrada estable para preferencias de usuario, ubicaciones de memoria, mapeos de skills, y
-fallbacks entre herramientas. Claude Code no lee este archivo automáticamente (lee `CLAUDE.md`) — es el
-punto de entrada de Codex, al que se llega vía el `AGENTS.md` raíz.
+fallbacks entre herramientas. Claude Code no lee este archivo automáticamente (lee `CLAUDE.md`, que
+trae un resumen del harness y le indica cuándo leer este) — es el punto de entrada de Codex, al que se
+llega vía el `AGENTS.md` raíz.
 
 ## Orden de carga
 
@@ -18,9 +19,13 @@ embebe credenciales, referenciar el path del helper en vez de duplicar la creden
 
 ## Preferencias del usuario
 
-- Responder en español por defecto. Mantener los términos técnicos en inglés cuando ese sea el término natural en el codebase.
-- Ser conciso. No repetir contexto previo. Explicar solo cuando cambia la decisión, el riesgo, o el próximo paso.
-- Nunca agregar una línea "Co-Authored-By" en los commits — solo el usuario es el autor.
+Las reglas transversales (sin `Co-Authored-By`, idioma, concisión, gates de confirmación) viven en
+una sola fuente: la sección "Reglas transversales" de `CLAUDE.md`, que Claude carga automáticamente y
+Codex lee en el paso 2 del orden de carga. No duplicarlas acá — si cambian, cambiarlas allá. Las
+preferencias aprendidas por sesión están en `memory/user_profile.json` (en Claude, un hook
+`SessionStart` inyecta un digest al arrancar; en Codex, leerlo directamente).
+
+- Mantener los términos técnicos en inglés cuando ese sea el término natural en el codebase.
 
 > Agregá acá tus propias preferencias específicas del proyecto, o en `CLAUDE.local.md` si preferís
 > mantener este archivo genérico (ej. una regla como "después de cualquier cambio de frontend, correr
