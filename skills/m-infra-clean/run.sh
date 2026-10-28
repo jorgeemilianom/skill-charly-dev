@@ -8,7 +8,8 @@
 # interactiva del skill, que sigue el Agent.md del cliente (el cron nunca toca passwords).
 # Por host guarda en memory/infra/runs/<alias>/: <ts>.txt (salida cruda, ya redactada) y <ts>.json
 # (hallazgos de evaluate.py, comparados contra la corrida anterior). Conserva las últimas 12.
-# Al final actualiza memory/infra/last-run.json, que lee /m-manager-digest.
+# Al final actualiza memory/infra/last-run.json (lo lee /m-manager-digest) y, con --cron, avisa al
+# webhook INFRA_NOTIFY_WEBHOOK de config.sh si está definido.
 # Nunca modifica nada en los hosts: el script remoto viaja por stdin vía base64, sin dejar archivos.
 
 set -u
@@ -38,6 +39,7 @@ for h in inv.get("hosts", []):
 EOF
 
 rc=0
+ERRS="$(mktemp)"; MANUAL="$(mktemp)"
 # Separador \x1f (no espacio en blanco): con tabs, `read` colapsa los campos vacíos y corre columnas.
 while IFS=$'\x1f' read -r alias auth host port user key ports age; do
   dir="$OUT/$alias"; mkdir -p "$dir"; chmod 700 "$OUT" "$dir"
@@ -48,15 +50,15 @@ while IFS=$'\x1f' read -r alias auth host port user key ports age; do
       case "$key" in /*) ;; *) key="$WS/$key" ;; esac
       timeout 300 ssh -n -i "$key" -p "$port" -o BatchMode=yes -o ConnectTimeout=15 \
         -o StrictHostKeyChecking=yes "$user@$host" "$REMOTE_CMD" > "$raw" 2>/dev/null ;;
-    *) echo "$alias: auth=$auth — solo corrida interactiva (/m-infra-clean $alias)"; continue ;;
+    *) echo "$alias: auth=$auth — solo corrida interactiva (/m-infra-clean $alias)"; echo "$alias" >> "$MANUAL"; continue ;;
   esac
   if ! grep -q '^### meta' "$raw"; then
-    echo "$alias: ERROR — sin salida del colector (conexión o timeout)"; rm -f "$raw"; rc=1; continue
+    echo "$alias: ERROR — sin salida del colector (conexión o timeout)" | tee -a "$ERRS"; rm -f "$raw"; rc=1; continue
   fi
   chmod 600 "$raw"
   prev=$(ls -1 "$dir"/*.txt 2>/dev/null | grep -v "/$TS.txt$" | tail -1)
   if ! python3 "$HERE/evaluate.py" "$raw" ${prev:+"$prev"} --expected-ports "$ports" --max-backup-age-h "$age" > "$dir/$TS.json"; then
-    echo "$alias: ERROR — evaluate.py falló (la corrida cruda queda en $raw)"; rm -f "$dir/$TS.json"; rc=1; continue
+    echo "$alias: ERROR — evaluate.py falló (la corrida cruda queda en $raw)" | tee -a "$ERRS"; rm -f "$dir/$TS.json"; rc=1; continue
   fi
   chmod 600 "$dir/$TS.json"
   ls -1t "$dir"/*.txt | tail -n +13 | while read -r f; do rm -f "$f" "${f%.txt}.json"; done
@@ -64,22 +66,18 @@ while IFS=$'\x1f' read -r alias auth host port user key ports age; do
 done < /tmp/.m-infra-hosts.$$
 rm -f /tmp/.m-infra-hosts.$$
 
-# Resumen para /m-manager-digest: última evaluación por host y sus hallazgos altos.
-python3 - "$OUT" "$WS/memory/infra/last-run.json" "$MODE" <<'EOF'
-import json, os, sys, glob
-out, dest, mode = sys.argv[1], sys.argv[2], sys.argv[3]
-summary = {"mode": "cron" if mode == "--cron" else "manual", "hosts": {}}
-for d in sorted(glob.glob(os.path.join(out, "*"))):
-    runs = sorted(glob.glob(os.path.join(d, "*.json")))
-    if not runs:
-        continue
-    r = json.load(open(runs[-1]))
-    f = r["findings"]
-    summary["hosts"][os.path.basename(d)] = {
-        "collected_at": r.get("collected_at"),
-        "counts": {s: sum(x["severity"] == s for x in f) for s in ("alta", "media", "baja")},
-        "alta": [x["finding"] for x in f if x["severity"] == "alta"],
-    }
-json.dump(summary, open(dest, "w"), ensure_ascii=False, indent=1)
-EOF
+# Resumen para /m-manager-digest (last-run.json) y payload del aviso (last-notify.json).
+python3 "$HERE/summarize.py" "$WS/memory/infra" "$([ "$MODE" = --cron ] && echo cron || echo manual)" "$ERRS" "$MANUAL"
+rm -f "$ERRS" "$MANUAL"
+
+# Aviso por webhook (ej. bot de WhatsApp en n8n) en cada corrida del cron. La URL vive en config.sh
+# (gitignored), nunca en este repo.
+if [ "$MODE" = "--cron" ]; then
+  [ -f "$WS/config.sh" ] && . "$WS/config.sh"
+  if [ -n "${INFRA_NOTIFY_WEBHOOK:-}" ]; then
+    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST "$INFRA_NOTIFY_WEBHOOK" \
+      -H "Content-Type: application/json" --data-binary @"$WS/memory/infra/last-notify.json")
+    echo "aviso webhook: HTTP $code"
+  fi
+fi
 exit $rc

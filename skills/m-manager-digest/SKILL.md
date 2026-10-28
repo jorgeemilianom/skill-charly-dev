@@ -43,7 +43,7 @@ F="$WS/memory/infra/last-run.json"
 [ -f "$F" ] && cat "$F" || echo "sin relevamiento de infra"
 ```
 
-A host whose `collected_at` is older than 8 days counts as a finding too (the cron stopped running).
+A host whose `collected_at` is older than 4 days counts as a finding too (the cron stopped running).
 
 ## Step 2 — Merge into one digest
 
@@ -63,7 +63,7 @@ bien sin nada que decidir.>
 de reuso cross-cliente. No repetir la lista completa de clientes si la mayoría está tranquila.>
 
 ### Infra
-<de memory/infra/last-run.json: solo hosts con hallazgos `alta` o relevamiento viejo (> 8 días), una
+<de memory/infra/last-run.json: solo hosts con hallazgos `alta` o relevamiento viejo (> 4 días), una
 línea por host. Si todo está limpio, "Infra sin alertas (relevamiento del <fecha>)". Para el detalle,
 `/m-infra-clean <alias>`.>
 

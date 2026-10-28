@@ -46,6 +46,11 @@ export DB_SYNC_REPOS=""
 # Referenciado desde agent-context.md como fallback legacy para que Codex también lo pueda ver. Dejar vacío para omitir.
 export CLAUDE_MEMORY_INDEX=""
 
+# ── /m-infra-clean ───────────────────────────
+# Webhook (POST JSON: project, status, commit, actor, message) que recibe el aviso de cada corrida del
+# cron de relevamiento, ej. un flujo de n8n que lo reenvía por WhatsApp. Vacío = sin aviso.
+INFRA_NOTIFY_WEBHOOK=""
+
 # ── Notas ────────────────────────────────────
 # Correr /m-dev-setup después de clonar (desde Claude Code o Codex, dentro de este repo) para
 # scaffoldear este archivo interactivamente en vez de editarlo a mano — también chequea

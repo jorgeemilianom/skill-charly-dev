@@ -223,8 +223,12 @@ proposal notes via `/m-manager-update <cliente>`.
 
 ## Step 7 — Weekly read-only cron (`cron` argument, or offered once after the first full run)
 
-`run.sh all --cron` collects every `local`/`key` host and refreshes `memory/infra/last-run.json`,
-which `/m-manager-digest` reads. It never fixes anything and never touches password hosts.
+`run.sh all --cron` collects every `local`/`key` host, refreshes `memory/infra/last-run.json` (read by
+`/m-manager-digest`; a host whose last collection is older than 4 days is flagged as stale) and, if
+`INFRA_NOTIFY_WEBHOOK` is set in `config.sh`, POSTs a summary to it on every run (same fields as a
+deploy notification — `project`, `status` (`failure` when there are high findings, errors or stale
+hosts), `commit` (run timestamp), `actor` — plus `message` with the readable summary). It never fixes
+anything and never touches password hosts.
 
 1. Read the current crontab and check the host's timezone (`timedatectl` / `/etc/timezone`). Cron uses
    the host's local time: convert the user's desired local hour and say so explicitly, including

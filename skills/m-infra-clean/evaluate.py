@@ -238,13 +238,13 @@ def evaluate(text, prev=None, expected_ports=(22, 80, 443), max_backup_age_h=26)
         def diff(sec, header, label, sev):
             new = set(sub(S.get(sec, []), header)) - set(sub(P.get(sec, []), header))
             if new:
-                add(sev, "anomalías", f"{label} nuevos desde la corrida anterior", "; ".join(sorted(new)[:6]))
-        diff("access_auth", "usuarios uid 0", "Usuarios uid 0", "alta")
-        diff("access_auth", "usuarios con shell", "Usuarios con shell de login", "alta")
-        diff("access_auth", "authorized_keys", "Claves SSH autorizadas", "alta")
+                add(sev, "anomalías", f"{label} desde la corrida anterior", "; ".join(sorted(new)[:6]))
+        diff("access_auth", "usuarios uid 0", "Usuarios uid 0 nuevos", "alta")
+        diff("access_auth", "usuarios con shell", "Usuarios con shell de login nuevos", "alta")
+        diff("access_auth", "authorized_keys", "Claves SSH autorizadas nuevas", "alta")
         diff("access_auth", "grupos sudo", "Cambios en grupos privilegiados", "media")
-        diff("firewall", "puertos escuchando", "Puertos escuchando", "media")
-        diff("anomalies", "crontabs", "Entradas de cron", "media")
+        diff("firewall", "puertos escuchando", "Puertos escuchando nuevos", "media")
+        diff("anomalies", "crontabs", "Entradas de cron nuevas", "media")
 
     order = {"alta": 0, "media": 1, "baja": 2}
     F.sort(key=lambda f: order[f["severity"]])
