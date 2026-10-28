@@ -8,8 +8,11 @@ proyecto.
 Antes de hacer trabajo de proyecto, leer:
 
 1. `agent-context.md`
-2. `CLAUDE.md`
-3. El `AGENTS.md` y/o `CLAUDE.md` local dentro de la subcarpeta del repo afectado, si existe.
+2. `CLAUDE.md`, y `CLAUDE.local.md` si existe (Claude lo importa vía `@CLAUDE.local.md`; Codex no
+   resuelve esa sintaxis, así que hay que leerlo explícitamente — tiene el mapa real de repos).
+3. La salida de `python3 scripts/session_context.py` — el mismo digest de `memory/` (preferencias,
+   notas de workflow, puntos ciegos, reglas universales) que Claude recibe por su hook `SessionStart`.
+4. El `AGENTS.md` y/o `CLAUDE.md` local dentro de la subcarpeta del repo afectado, si existe.
 
 El adaptador mapea las memorias de Claude, las skills de Claude, y las convenciones del proyecto a
 instrucciones legibles por Codex sin copiar secretos.

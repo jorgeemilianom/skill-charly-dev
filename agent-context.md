@@ -9,10 +9,13 @@ llega vía el `AGENTS.md` raíz.
 ## Orden de carga
 
 1. Leer este archivo primero.
-2. Leer el `CLAUDE.md` del workspace para la vista general de repos y convenciones.
-3. Leer `config.sh` para la identidad de proyecto/repos de Jira de este workspace (project key, repos, ramas base).
-4. Si se está trabajando dentro de la subcarpeta de un repo, leer el `AGENTS.md` y/o `CLAUDE.md` local de ese repo.
-5. Leer memoria específica de la tarea solo cuando la tarea toca esa área.
+2. Leer el `CLAUDE.md` del workspace para la vista general de repos y convenciones, y
+   `CLAUDE.local.md` si existe (Codex no resuelve el import `@CLAUDE.local.md`).
+3. Correr `python3 scripts/session_context.py` y tomar su salida como contexto (en Claude lo hace el
+   hook `SessionStart`; Codex no ejecuta los hooks de `.claude/settings.json`).
+4. Leer `config.sh` para la identidad de proyecto/repos de Jira de este workspace (project key, repos, ramas base).
+5. Si se está trabajando dentro de la subcarpeta de un repo, leer el `AGENTS.md` y/o `CLAUDE.md` local de ese repo.
+6. Leer memoria específica de la tarea solo cuando la tarea toca esa área.
 
 No copiar secretos de `~/.claude` u otro estado de Claude a archivos del proyecto. Si un helper ya
 embebe credenciales, referenciar el path del helper en vez de duplicar la credencial.
@@ -23,7 +26,7 @@ Las reglas transversales (sin `Co-Authored-By`, idioma, concisión, gates de con
 una sola fuente: la sección "Reglas transversales" de `CLAUDE.md`, que Claude carga automáticamente y
 Codex lee en el paso 2 del orden de carga. No duplicarlas acá — si cambian, cambiarlas allá. Las
 preferencias aprendidas por sesión están en `memory/user_profile.json` (en Claude, un hook
-`SessionStart` inyecta un digest al arrancar; en Codex, leerlo directamente).
+`SessionStart` inyecta un digest al arrancar; en Codex, el paso 3 del orden de carga).
 
 - Mantener los términos técnicos en inglés cuando ese sea el término natural en el codebase.
 
