@@ -98,7 +98,9 @@ source "$WS/scripts/workspace-env.sh"
 uv run $JIRA_SKILL/core/jira-search.py --json query "project = $PROJECT_KEY AND issuetype = Epic ORDER BY created DESC"
 ```
 
-Cache format — `$WS/memory/epics.json`, keyed by project so multiple projects can share the file:
+Write it with `python3 $WS/scripts/memory_store.py write epics.json < <file>` (atomic, locked) — never
+`> memory/epics.json` directly. Cache format — `$WS/memory/epics.json`, keyed by project so multiple
+projects can share the file:
 ```json
 {
   "<PROJECT_KEY>": {

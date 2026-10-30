@@ -45,19 +45,15 @@ for REPO in $REPOS; do
   git -C $WS/projects/$REPO fetch origin 2>/dev/null; git -C $WS/projects/$REPO branch -a | grep -i "<TICKET_ID>"
 done
 
-# 3 — Ensure memory/ files exist, upgrade legacy patterns entries
-mkdir -p $WS/memory/tickets $WS/memory/assessments
-[ -f $WS/memory/global_rules.json ] || echo '{"rules":[]}' > $WS/memory/global_rules.json
-[ -f $WS/memory/patterns.json ]     || echo '{"patterns":[]}' > $WS/memory/patterns.json
-jq empty $WS/memory/patterns.json 2>/dev/null || echo '{"patterns":[]}' > $WS/memory/patterns.json
-jq '.patterns |= map(. + {type: (.type // "success"), frequency: (.frequency // 1), confidence: (.confidence // 0.5), tags: (.tags // [])})' \
-  $WS/memory/patterns.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/patterns.json
-[ -f $WS/memory/decisions.json ] || echo '{"decisions":[]}' > $WS/memory/decisions.json
-[ -f $WS/memory/mistakes.json ]  || echo '{"mistakes":[]}' > $WS/memory/mistakes.json
-[ -f $WS/memory/tickets/<TICKET_ID>.json ] || echo '{"summary":"","decisions":[],"learnings":[]}' > $WS/memory/tickets/<TICKET_ID>.json
+# 3 — Memory health + prior work on this ticket (read-only; missing files are fine — memory_store.py
+#     creates them on first write, and never resets one that exists but doesn't parse)
+python3 $WS/scripts/memory_store.py validate | tail -3
 [ -f $WS/memory/assessments/<TICKET_ID>.json ] && cat $WS/memory/assessments/<TICKET_ID>.json
-cat $WS/memory/tickets/<TICKET_ID>.json
+[ -f $WS/memory/tickets/<TICKET_ID>.json ] && cat $WS/memory/tickets/<TICKET_ID>.json
 ```
+
+If `validate` reports an error, tell the user before continuing (memory writes at closing will
+refuse to touch that file) — `/m-memory restore` covers the fix.
 
 **Then**, once `TICKET_JSON` is in hand — extract the epic key from that **same** blob, no second API
 call:
@@ -75,32 +71,24 @@ print(epic or '')
 table in Section A.1 below — do this as soon as the ticket JSON is available, don't wait for Section A.
 This same detection is reused as-is when execution reaches Section A.1 later; no need to redo it.
 
-**Filtered memory read** — once repos are detected, read `memory/` filtered to what's actually relevant
-instead of dumping everything (unfiltered dumps get noisy and expensive as `memory/` grows — see
-`memory/global_rules.json`'s `tags` field). Entries with no `tags` (or an empty array) are universal
-process/git rules and always included regardless of detected repo:
+**Ranked memory read** — once repos are detected, query `memory/` ranked and budgeted instead of
+dumping every tag match (dumps get noisy and expensive as `memory/` grows). `memory_query.py` scores
+each entry by scope match (exact repo > client/alias > topic > universal), confidence, recency and
+reinforcement, plus word overlap with the ticket text, and stops at the budget. Client tags
+(`AcmeCorp`) and topic tags (`nginx`, `ci-cd` — activated by keywords in `--text`) are resolved too,
+which the old tag-equality filter silently missed:
 
 ```bash
-# Replace TAGS with the space-separated repos detected above, e.g. TAGS='internal-platform'
-TAGS='<detected-repo-1> <detected-repo-2>'
-TAG_FILTER=$(printf '%s\n' $TAGS | jq -R . | jq -s '.')
-
-jq --argjson tags "$TAG_FILTER" \
-  '[.rules[] | select(.status == "active") | select((.tags // []) == [] or ([.tags[]? | IN($tags[])] | any))]' \
-  $WS/memory/global_rules.json
-
-jq --argjson tags "$TAG_FILTER" \
-  '[.patterns[] | select((.tags // []) == [] or ([.tags[]? | IN($tags[])] | any))]' \
-  $WS/memory/patterns.json
-
-jq --argjson tags "$TAG_FILTER" \
-  '[.decisions[] | select((.tags // []) == [] or ([.tags[]? | IN($tags[])] | any))]' \
-  $WS/memory/decisions.json
-
-jq --argjson tags "$TAG_FILTER" \
-  '[.mistakes[] | select((.tags // []) == [] or ([.tags[]? | IN($tags[])] | any))]' \
-  $WS/memory/mistakes.json
+python3 $WS/scripts/memory_query.py \
+  --repos '<detected-repo-1>,<detected-repo-2>' \
+  --clients '<Business/ client folder, if known>' \
+  --text "<ticket summary + first lines of the description>" \
+  --budget 8000
 ```
+
+The hook in `.claude/settings.json` may already have injected the repo's compiled digest earlier in
+the session — this query still runs, because `--text` re-ranks for this specific ticket and adds the
+universal rules below 0.8 that the SessionStart digest leaves out.
 
 Once all complete, determine:
 - **Branch exists in any repo** → resumed branch. Skip sections E, F, A, B. Go to Section G.
@@ -108,13 +96,17 @@ Once all complete, determine:
 
 ---
 
-## Section E — Historical Context (passive, from the filtered read above)
+## Section E — Historical Context (passive, from the ranked read above)
 
-Extract from the filtered `memory/` results from Step 0 (already scoped to detected repos + universal
-rules — no need to re-filter or second-guess relevance, that filtering already happened):
+Extract from the ranked `memory/` results from Step 0 (already scoped and ranked — no need to
+re-filter or second-guess relevance; `conf` shown there is the *effective* confidence, already
+discounted for age):
 
 1. **`memory/`** (primary): decisions, mistakes, patterns, global rules, ticket history.
-2. **`~/.claude/projects/`** (secondary): style preferences and authorization rules.
+2. **The repo's own knowledge**, listed under "Dónde más mirar" in its compiled digest
+   (`memory/compiled/repo-<repo>.md`): its `CLAUDE.md`, its `ia-memory/` notes for the touched area,
+   and `Business/<cliente>/`.
+3. **`~/.claude/projects/`** (secondary, Claude only): style preferences and authorization rules.
 
 Feed findings into the **Memory context** section of the Technical Assessment, grouped by confidence
 (rules only — `patterns`/`decisions` don't carry a directive confidence, present them as-is):
@@ -558,8 +550,11 @@ assessment = {
     'memory_context_used': '<patterns/mistakes that influenced approach — brief or null>'
 }
 
-with open(f'{WS}/memory/assessments/<TICKET_ID>.json', 'w') as f:
-    json.dump(assessment, f, indent=2)
+import sys
+sys.path.insert(0, f'{WS}/scripts')
+from memory_store import locked, write_json_atomic  # lock + atomic replace, never a half-written file
+with locked():
+    write_json_atomic('assessments/<TICKET_ID>.json', assessment)
 ```
 
 Overwrite if a saved assessment already exists — confirmed version is always the most current.
