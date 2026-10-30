@@ -45,6 +45,18 @@ F="$WS/memory/infra/last-run.json"
 
 A host whose `collected_at` is older than 4 days counts as a finding too (the cron stopped running).
 
+And the agent's own initiative — one read-only pass, proposals only (nothing is executed or unblocked):
+
+```bash
+python3 "$WS/scripts/cognition.py" tick --limit 5
+python3 "$WS/scripts/cognition.py" metrics
+```
+
+`tick.proposals` go into "Propuestas" (goals whose activation date and dependencies allow progress,
+by priority); `pending_evaluations` older than a couple of weeks deserve a line — a prediction nobody
+contrasted teaches nothing. From `metrics`, mention the Brier score only if there are 10+ determinate
+results (fewer is noise).
+
 ## Step 2 — Merge into one digest
 
 ```
@@ -83,7 +95,9 @@ This skill only runs when invoked — it does not register itself as a recurring
 cadence is wanted, that's a separate, explicit step: use the `schedule` skill to create a routine
 whose prompt is `/m-manager digest` (or equivalent), on whatever cadence is confirmed with the user.
 Setting up a recurring scheduled agent is an ongoing commitment (it keeps running, keeps costing) —
-never register one without the user explicitly confirming the cadence first.
+never register one without the user explicitly confirming the cadence first. The same applies to
+`cognition.py tick` on its own (see "Scheduler" in `docs/cognition.md`): it is read-only and safe to run
+from cron, but installing that cron is the user's call.
 
 ---
 

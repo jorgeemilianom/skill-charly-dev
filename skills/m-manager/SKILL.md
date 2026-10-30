@@ -158,7 +158,12 @@ CLIENTE="<resolved client name>"
 [ -f "$WS/Business/$CLIENTE/Agent.md" ] && cat "$WS/Business/$CLIENTE/Agent.md"
 cat "$WS/Business/$CLIENTE/context.md" 2>/dev/null
 cat "$WS/Business/$CLIENTE/client.md" 2>/dev/null
+python3 "$WS/scripts/cognition.py" context --clients "$CLIENTE" --budget 2000   # open commitments, lessons
 ```
+
+The last line is the agent's own continuity with this client (the cognitive protocol in `agent-context.md` ("Protocolo cognitivo")): open goals
+(promised follow-ups), pending predictions and evaluated experiences. Bring up an open commitment if the
+conversation touches it.
 
 Respect `Business/Agent.md` / per-client `Agent.md` as usual (see above). `client.md`'s `repos:` /
 `jira_key:` (or `jira_epic:`) manifest, if present, is what lets Step 4 hand off to `/m-dev` without
@@ -222,7 +227,16 @@ or
 Ejecutado en infraestructura del cliente: <one-line summary, ver detalle en m-manager-exec o context.md>.
 ```
 Same confirm-before-write and commit/push offer as any other `Business/` write (see "Keeping
-`Business/` in sync" above). The pure-business branch (Step 4, first case) already writes its own note
+`Business/` in sync" above).
+
+If the conversation left a commitment that outlives the session (a follow-up, a promised check, a
+proposal to send), record it as a goal tagged with the client so the next session — or a `tick` — picks
+it up:
+```bash
+echo '{"title":"...","reason":"...","next_action":"...","success_criterion":"...","priority":3,"tags":["<cliente>"],
+  "activate_at":"2026-11-10T09:00:00-03:00"}' | python3 "$WS/scripts/memory_store.py" cognitive goal
+```
+`activate_at` is when to start reviewing it, not a deadline. The pure-business branch (Step 4, first case) already writes its own note
 inline — no separate log needed there.
 
 ---

@@ -37,6 +37,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from text_similarity import words  # noqa: E402
+import cognition_model as cm  # noqa: E402
 
 ROOT = os.environ.get("CLAUDE_PROJECT_DIR") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MEM = os.path.join(ROOT, "memory")
@@ -83,11 +84,15 @@ def default_for(name):
     return {}
 
 
-def read_json(name, default=None):
-    """Missing file -> copy of default. Existing but unparseable -> MemoryCorrupt (never reset)."""
+_DEFAULT = object()
+
+
+def read_json(name, default=_DEFAULT):
+    """Missing file -> copy of default (the per-file empty shape when omitted; None stays None).
+    Existing but unparseable -> MemoryCorrupt (never reset)."""
     path = mem_path(name)
     if not os.path.exists(path):
-        return copy.deepcopy(default if default is not None else default_for(name))
+        return copy.deepcopy(default_for(name) if default is _DEFAULT else default)
     try:
         with open(path, encoding="utf-8") as f:
             raw = f.read()
@@ -126,6 +131,12 @@ def locked(timeout=30):
 
 def validate(name, data):
     base = os.path.basename(name)
+    if base == cm.FILE:
+        try:
+            cm.validate_doc(data)
+        except cm.IncompatibleSchema as e:
+            raise ValueError(str(e))
+        return
     if base not in COLLECTIONS:
         if not isinstance(data, (dict, list)):
             raise ValueError(f"{base}: se esperaba un objeto o lista JSON")
@@ -148,7 +159,7 @@ def validate(name, data):
             raise ValueError(f"{base}: ids duplicados {sorted(dup)}")
 
 
-def write_json_atomic(name, data):
+def write_json_atomic(name, data, new_mode=0o664):
     path = mem_path(name)
     validate(path, data)
     d = os.path.dirname(path)
@@ -157,7 +168,7 @@ def write_json_atomic(name, data):
         st = os.stat(path)
         mode, gid = st.st_mode & 0o777, st.st_gid
     except FileNotFoundError:
-        mode, gid = 0o664, None
+        mode, gid = new_mode, None
     fd, tmp = tempfile.mkstemp(dir=d, prefix=".tmp-", suffix=".json")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -179,7 +190,7 @@ def write_json_atomic(name, data):
 def update_json(name, fn, default=None, compile_after=True):
     """Locked read-modify-write. fn(data) mutates in place and/or returns a new object (or None)."""
     with locked():
-        data = read_json(name, default)
+        data = read_json(name, _DEFAULT if default is None else default)
         result = fn(data)
         new = data if result is None or result is True or not isinstance(result, (dict, list)) else result
         write_json_atomic(name, new)
@@ -378,6 +389,108 @@ def cmd_write(a):
     print(f"escrito memory/{a.path}")
 
 
+# ---------------------------------------------------------------- cognitive state (memory/cognition.json)
+
+def legacy_profile():
+    """user_profile.json for the one-time self_model import. A corrupt profile never blocks the
+    agent's own state — it just isn't imported (and is never written here)."""
+    try:
+        return read_json("user_profile.json", default={})
+    except MemoryCorrupt:
+        return None
+
+
+def cognitive(op, payload):
+    """Run one cognitive operation as a single locked transaction. Returns the structured result."""
+    with locked():
+        path = mem_path(cm.FILE)
+        created = not os.path.exists(path)
+        if created:  # missing (never corrupt) -> start a fresh document, importing the legacy model
+            doc = cm.empty_doc(legacy_profile())
+        else:
+            doc = read_json(cm.FILE)
+            cm.check_version(doc)
+        if op == "init":
+            if payload:
+                cm._fields(payload, [], [], "init")
+            migrated = created or cm.import_legacy(doc, legacy_profile())
+            result = {"created": created, "migrated_legacy": bool(doc["agent"].get("migrated_from")) and migrated,
+                      "schema_version": doc["schema_version"]}
+            if not created and not migrated:
+                return result  # nothing changed: no write
+        else:
+            result = cm.apply(op, doc, payload)
+            if created:
+                result["created_state"] = True
+        write_json_atomic(cm.FILE, doc, new_mode=0o660)
+    return result
+
+
+def cmd_cognitive(a):
+    raw = "" if sys.stdin is None or sys.stdin.isatty() else sys.stdin.read()
+    try:
+        payload = json.loads(raw) if raw.strip() else {}
+    except json.JSONDecodeError as e:
+        print(json.dumps({"ok": False, "kind": "input", "error": f"stdin no es JSON válido: {e}"}, ensure_ascii=False))
+        sys.exit(1)
+    try:
+        result = cognitive(a.op, payload)
+    except cm.IncompatibleSchema as e:
+        print(json.dumps({"ok": False, "kind": "incompatible_schema", "error": str(e)}, ensure_ascii=False))
+        sys.exit(2)
+    except MemoryCorrupt as e:
+        print(json.dumps({"ok": False, "kind": "corrupt", "error": str(e)}, ensure_ascii=False))
+        sys.exit(2)
+    except (cm.CognitionError, ValueError) as e:
+        print(json.dumps({"ok": False, "kind": "validation", "error": str(e)}, ensure_ascii=False))
+        sys.exit(1)
+    print(json.dumps({"ok": True, "op": a.op, "result": result}, ensure_ascii=False))
+
+
+# ---------------------------------------------------------------- restore (explicit, validated)
+
+def cmd_restore(a):
+    """Show what a backup holds for one file and, only with --apply, replace the current file.
+    The backup copy must parse and pass the same validation as any write; the current state is
+    backed up first, so a restore is itself reversible."""
+    src = os.path.join(BACKUPS, os.path.basename(a.backup))
+    rel = a.file.lstrip("/")
+    mem_path(rel)  # refuse paths outside memory/
+    try:
+        with tarfile.open(src, "r:gz") as tar:
+            member = tar.getmember(f"memory/{rel}")
+            raw = tar.extractfile(member).read()
+    except (FileNotFoundError, KeyError) as e:
+        sys.exit(f"ERROR: no está {rel} en {src} ({e})")
+    try:
+        data = json.loads(raw)
+        validate(rel, data)
+    except Exception as e:
+        sys.exit(f"ERROR: la copia del backup no es válida ({e}); no se restaura")
+
+    def summary(d):
+        if isinstance(d, dict):
+            return {k: (len(v) if isinstance(v, (list, dict)) else v) for k, v in d.items()
+                    if isinstance(v, (list, dict, int, str)) and k != "_doc"}
+        return {"items": len(d)}
+    try:
+        current = read_json(rel, default=None)
+        cur = summary(current) if current is not None else "(no existe)"
+    except MemoryCorrupt:
+        cur = "(actual corrupto)"
+    print(json.dumps({"file": rel, "backup": os.path.basename(src), "backup_summary": summary(data),
+                      "current_summary": cur, "applied": bool(a.apply)}, ensure_ascii=False, indent=1))
+    if not a.apply:
+        print("Sin cambios. Repetir con --apply para restaurar (se hace backup del estado actual antes).")
+        return
+    backup(quiet=True)  # current state first, even if corrupt files are skipped
+    with locked():
+        write_json_atomic(rel, data)
+    if rel in COLLECTIONS:
+        recompile()
+    print(f"restaurado memory/{rel} desde {os.path.basename(src)}")
+
+
 # ---------------------------------------------------------------- validate / stats / backup
 
 def iter_json_files():
@@ -418,6 +531,18 @@ def cmd_stats(a):
             line += (f" ({len(act)} activas, {sum(1 for r in act if not r.get('tags'))} universales, "
                      f"{sum(1 for r in act if r.get('reinforced_count'))} reforzadas)")
         print(line)
+    try:
+        c = read_json(cm.FILE, default=None)
+        if c is None:
+            print("cognition.json: no inicializado (se usa el self_model legado de user_profile.json)")
+        else:
+            eps = c.get("episodes", [])
+            print(f"cognition.json: {sum(e.get('status') == 'pending' for e in eps)} experiencias pendientes, "
+                  f"{sum(e.get('status') == 'evaluated' for e in eps)} evaluadas, "
+                  f"{sum(g.get('status') == 'active' for g in c.get('goals', []))} objetivos activos, "
+                  f"{sum(b.get('status') == 'active' for b in c.get('beliefs', []))} creencias activas")
+    except MemoryCorrupt as e:
+        print(f"cognition.json: ERROR {e}")
     for sub in ("tickets", "snapshots", "assessments", "review_rounds"):
         p = os.path.join(MEM, sub)
         print(f"{sub}/: {len(os.listdir(p)) if os.path.isdir(p) else 0}")
@@ -540,6 +665,16 @@ def main():
     s = sp.add_parser("write", help="escritura atómica de un JSON leído de stdin, path relativo a memory/")
     s.add_argument("path")
     s.set_defaults(fn=cmd_write)
+
+    s = sp.add_parser("cognitive", help="estado propio del agente (memory/cognition.json): JSON por stdin, JSON por stdout")
+    s.add_argument("op", help="init | experience | evaluate | goal | update-goal | belief | archive-belief | set-blind-spots | set-agent")
+    s.set_defaults(fn=cmd_cognitive)
+
+    s = sp.add_parser("restore", help="restaurar un archivo desde memory/.backups (valida; solo escribe con --apply)")
+    s.add_argument("backup", help="nombre del backup (backup --list)")
+    s.add_argument("file", help="path relativo a memory/, ej. cognition.json")
+    s.add_argument("--apply", action="store_true")
+    s.set_defaults(fn=cmd_restore)
 
     sp.add_parser("validate", help="valida que todo memory/*.json parsee y cumpla el schema").set_defaults(fn=cmd_validate)
     sp.add_parser("stats").set_defaults(fn=cmd_stats)

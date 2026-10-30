@@ -1,6 +1,6 @@
 ---
 name: m-memory
-description: "Maintenance and inspection of the harness memory (memory/): health stats and schema validation, ranked queries by repo/client/topic, backups and restore, and the periodic consolidation pass — merge semantic duplicates (including across languages), archive stale retrospective rules, fix orphan tags, and propose promoting mature rules into the owning repo's CLAUDE.md. Every change goes through scripts/memory_store.py (locked, atomic, reversible). Use for '/m-memory', '/m-memory stats', '/m-memory query <repo|cliente> [texto]', '/m-memory consolidate', '/m-memory backup', '/m-memory restore <archivo>', or when the SessionStart digest says a consolidation is overdue and the user agrees."
+description: "Maintenance and inspection of the harness memory (memory/) and of the agent's own state (memory/cognition.json: experiences, goals, beliefs): health stats and schema validation, ranked queries by repo/client/topic, backups and restore, and the periodic consolidation pass — merge semantic duplicates (including across languages), archive stale retrospective rules, fix orphan tags, and propose promoting mature rules into the owning repo's CLAUDE.md. Every change goes through scripts/memory_store.py (locked, atomic, reversible). Use for '/m-memory', '/m-memory stats', '/m-memory query <repo|cliente> [texto]', '/m-memory consolidate', '/m-memory backup', '/m-memory restore <archivo>', or when the SessionStart digest says a consolidation is overdue and the user agrees."
 allowed-tools: Bash Read Write Edit
 ---
 
@@ -46,14 +46,13 @@ python3 $WS/scripts/memory_query.py --repos <repos> --clients <clientes> --text 
 `python3 $WS/scripts/memory_store.py backup` (también corre solo, una vez por día, desde el hook de
 SessionStart; guarda 14). `backup --list` para ver los disponibles.
 
-Restore es una operación destructiva sobre memoria compartida entre sesiones: **mostrar el diff y pedir
-OK antes de reemplazar**:
+Restore es una operación destructiva sobre memoria compartida entre sesiones: **mostrar el resumen y
+pedir OK antes de reemplazar**. `restore` valida la copia del backup con las mismas reglas que cualquier
+escritura y, con `--apply`, hace backup del estado actual antes de reemplazarlo:
 
 ```bash
-R=$(mktemp -d); tar -xzf $WS/memory/.backups/<backup>.tar.gz -C "$R" memory/<archivo>
-diff <(python3 -m json.tool "$R/memory/<archivo>") <(python3 -m json.tool "$WS/memory/<archivo>") | head -80
-# tras el OK:
-python3 $WS/scripts/memory_store.py write <archivo> < "$R/memory/<archivo>"
+python3 $WS/scripts/memory_store.py restore <backup>.tar.gz <archivo>          # resumen, no escribe
+python3 $WS/scripts/memory_store.py restore <backup>.tar.gz <archivo> --apply  # tras el OK
 ```
 
 ## `consolidate` — el pase periódico
@@ -95,6 +94,26 @@ documentación versionada del repo, donde lo ve todo el equipo.
    python3 $WS/scripts/memory_store.py stats
    ```
    Resumen al usuario: qué cambió, en números, y qué quedó pendiente de su OK.
+
+## `cognitive` — estado propio del agente (`memory/cognition.json`)
+
+Inspección (solo lectura): `python3 $WS/scripts/cognition.py status | metrics | tick | recall | context`.
+Mantenimiento, con el mismo cuidado que el resto de la memoria:
+
+- **Pendientes viejos:** listar en `status` las experiencias pendientes de más de 30 días y, por cada
+  una, evaluarla si ya hay evidencia o con `outcome: null` si nunca se va a saber — nunca inventar el
+  resultado.
+- **Objetivos estancados:** activos con `next_action` que ya no corresponde → actualizar, pausar o
+  abandonar con nota (`update-goal`); el historial queda.
+- **Creencias:** si una tiene contraevidencia nueva, revisarla con `belief` + `supersedes` (la anterior
+  queda `superseded`) o archivarla con `archive-belief` + motivo.
+- **Inicializar** explícitamente (importa el `self_model` legado sin tocar `user_profile.json`):
+  `python3 $WS/scripts/memory_store.py cognitive init` — idempotente.
+- **Restore validado:** `python3 $WS/scripts/memory_store.py restore <backup> cognition.json` muestra el
+  resumen; `--apply` restaura (hace backup del estado actual antes). Vale para cualquier archivo de
+  `memory/`.
+
+Detalle completo, ejemplos y límites: `docs/cognition.md`.
 
 ## Reglas
 

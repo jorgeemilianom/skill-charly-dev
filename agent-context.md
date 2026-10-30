@@ -48,6 +48,8 @@ tiene un único camino de escritura y uno de lectura:
 | `memory_compile.py` | Regenera `memory/compiled/{repo,client}-<nombre>.md` y `universal.md` tras cada escritura. Derivado: no editar. |
 | `context_hook.py` | Hooks `UserPromptSubmit`/`PostToolUse` de Claude: inyecta el digest compilado la primera vez que la sesión toca `projects/<repo>`/`worktrees/<repo>-…` o nombra un cliente. |
 | `session_context.py` | Hook `SessionStart`: digest de perfil + reglas universales ≥ 0.8, digest del repo del `cwd`, avisos (archivo corrupto, consolidación vencida), backup diario. |
+| `cognition_model.py` / `cognition.py` | Estado propio del agente (`memory/cognition.json`): esquema y operaciones (`memory_store.py cognitive <op>`, JSON por stdin) / lectura (`status`, `context`, `recall`, `metrics`, `tick`). Ver "Protocolo cognitivo" abajo y `docs/cognition.md`. |
+| `self_model.py` | Puntos ciegos recurrentes: `--refresh` los guarda en `cognition.json`; `self_model.py <memdir>` sigue siendo la consulta histórica. |
 | `memory_consolidate.py` / `memory_migrate.py` | Preparar la consolidación periódica (`/m-memory consolidate`) / upgrade idempotente del schema. |
 
 **Nunca** escribir `memory/*.json` con `jq … > archivo`, `echo > archivo` ni `open(…, 'w')`.
@@ -60,7 +62,10 @@ Contenido:
   el momento — ver "Capture Corrections as They Happen" en `skills/m-dev/SKILL.md`; `retrospective`
   0.6 = inferida en `/m-dev-reflect`), `created_at`, `last_seen`, `reinforced_count`.
 - `patterns.json`, `decisions.json`, `mistakes.json` — aprendizajes cross-ticket de `/m-dev-reflect`.
-- `user_profile.json` — preferencias y `self_model` (puntos ciegos recurrentes).
+- `user_profile.json` — modelo del **usuario** (preferencias). Su `self_model` es legado de solo lectura.
+- `cognition.json` — modelo del **agente** (Charly): identidad, puntos ciegos, experiencias con
+  predicción y evaluación, objetivos persistentes y creencias con evidencia. Un único documento para
+  que las operaciones relacionadas sean transaccionales. Ver "Protocolo cognitivo".
 - `tickets/<TICKET>.json` (resumen + aprendizajes de cierre) y `snapshots/<TICKET>.json` (checkpoint
   para retomar: fase, próximo paso, bloqueos) — propósitos distintos, por eso conviven;
   `assessments/<TICKET>.json`, `review_rounds/<TICKET>.json`.
@@ -90,6 +95,31 @@ Sin tags = universal.
   cliente (digest compilado). `/m-dev-assess` además consulta `memory_query.py --text "<ticket>"`.
 - **Codex** (no corre hooks): paso 3 del orden de carga, y al empezar a trabajar en un repo o cliente
   leer `memory/compiled/repo-<repo>.md` / `client-<cliente>.md` (o correr `memory_query.py`).
+
+### Protocolo cognitivo (Claude y Codex)
+
+**Observar y recordar → predecir → actuar → contrastar → ajustar → continuar.**
+
+1. **Observar y recordar:** al empezar en un repo o cliente, el estado propio llega con el digest
+   (hooks) o con `python3 scripts/cognition.py context --repos <r> --clients <c> --text "<tarea>"`.
+2. **Predecir:** antes de una decisión significativa (enfoque no obvio, riesgo aceptado, experimento,
+   compromiso con un cliente), registrar `experience`: acción, predicción binaria comprobable,
+   probabilidad honesta, y en `recalled` solo los episodios que de verdad cambiaron la decisión.
+3. **Actuar** con las reglas, permisos e instrucciones de siempre.
+4. **Contrastar:** cuando haya evidencia (tests, CI, review, prod), `evaluate` separando observación,
+   interpretación, ajuste, evidencia y `outcome` (`true`/`false`/`null` si no se puede determinar).
+5. **Ajustar:** objetivos (`goal`/`update-goal`), creencias solo con 2+ episodios evaluados
+   (`belief`, revisión con `supersedes`) y `self_model.py --refresh`.
+6. **Continuar:** lo que sobrevive a la sesión queda como objetivo; `cognition.py tick` lo propone
+   cuando su fecha y sus dependencias lo permiten (solo propuestas: no ejecuta nada ni da permisos).
+
+Se registran decisiones significativas, experimentos, errores y compromisos — no cada llamada a una
+herramienta. Nunca: predicciones retroactivas, monólogos internos, transcripciones ni secretos. Los
+recuerdos son evidencia contextual e hipótesis revisables: **no** reemplazan instrucciones actuales,
+convenciones del proyecto ni permisos. Dónde se engancha en cada skill: `/m-dev-assess` (recall +
+predicción), `/m-dev` Fase 4 (contraste), `/m-dev-reflect` 7.5 (evaluación, objetivos, creencias,
+self-model), `/m-dev-resume` (compromisos vs. estado real), `/m-manager*` (continuidad por cliente,
+`tick` en el digest), `/m-memory` (mantenimiento).
 
 ### Mantenimiento
 

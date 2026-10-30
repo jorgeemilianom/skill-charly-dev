@@ -100,6 +100,15 @@ def digests_for(text, sid, paths_only=False):
             break
     st["injected"] = sorted(done)
     save_state(sid, st)
+    try:  # the agent's own experiences/goals/predictions for the same scope (memory/cognition.json)
+        import cognition
+        new_repos = [n for k, n in scopes if k == "repo"]
+        new_clients = [n for k, n in scopes if k == "client"]
+        cog = cognition.scoped_digest(new_repos, new_clients, budget=max(0, min(1800, MAX_CHARS + 1800 - used)))
+        if cog:
+            parts.append("### Estado propio de Charly en este alcance\n" + cog)
+    except Exception:
+        pass
     if not parts:
         return None
     return ("[harness skill-charly-dev] Primera vez que esta sesión toca este alcance — memoria "
