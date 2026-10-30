@@ -136,10 +136,13 @@ if [ -f "$WS/memory/board.json" ]; then
 else
   uv run $JIRA_SKILL/workflow/jira-board.py --json list | python3 -c "
 import json, sys
+sys.path.insert(0, '$WS/scripts')
+from memory_store import locked, write_json_atomic
 boards = json.load(sys.stdin)
 match = next((b for b in boards if b.get('location', {}).get('projectKey') == '$PROJECT_KEY'), None) or (boards[0] if boards else None)
 if match:
-    json.dump({'id': match['id'], 'name': match['name']}, open('$WS/memory/board.json', 'w'))
+    with locked():
+        write_json_atomic('board.json', {'id': match['id'], 'name': match['name']})
     print(match['id'])
 "
 fi

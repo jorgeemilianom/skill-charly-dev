@@ -16,9 +16,9 @@ workflow ticket→PR y de gestión de clientes con estado propio. Sus capas:
 
 | Capa | Dónde | Rol |
 |---|---|---|
-| Lógica | `skills/<name>/SKILL.md` (expuestas vía symlinks en `.claude/skills/`) | Familias `/m-dev*` (ticket→PR) y `/m-manager*` (capa de negocio por cliente) |
+| Lógica | `skills/<name>/SKILL.md` (expuestas vía symlinks en `.claude/skills/`) | Familias `/m-dev*` (ticket→PR) y `/m-manager*` (capa de negocio por cliente), `/m-memory` (mantenimiento de la memoria) |
 | Config | `config.sh` (gitignored) | Project key de Jira, `REPOS`, ramas base, `DB_SYNC_REPOS` |
-| Memoria | `memory/` (gitignored) | **Memoria canónica del harness**: `user_profile.json`, `global_rules.json`, `patterns.json`, `decisions.json`, `mistakes.json`, `assessments/`, `snapshots/`, `review_rounds/` |
+| Memoria | `memory/` (gitignored) | **Memoria canónica del harness**: `user_profile.json`, `global_rules.json`, `patterns.json`, `decisions.json`, `mistakes.json`, `assessments/`, `snapshots/`, `review_rounds/`; digests derivados en `compiled/`, backups diarios en `.backups/`. Se escribe solo vía `scripts/memory_store.py` y se lee rankeada vía `scripts/memory_query.py` |
 | Contexto de cliente | `Business/<cliente>/` (gitignored) | Conocimiento estable por cliente, playbooks de infra (`Agent.md`), credenciales |
 | Código | `projects/<repo>/` (gitignored) | Checkouts independientes de cada repo |
 | Toolbox | `scripts/` (trackeado) + `scripts/local/` (gitignored, ver `MANIFEST.json`) | Helpers de Jira, trims, scripts que las skills se escriben a sí mismas |
@@ -26,7 +26,9 @@ workflow ticket→PR y de gestión de clientes con estado propio. Sus capas:
 
 - La memoria canónica es `memory/`, no la auto-memoria de Claude (`~/.claude/projects/.../memory/`).
   Un hook `SessionStart` (`.claude/settings.json` → `scripts/session_context.py`) inyecta al arrancar
-  un digest de `memory/user_profile.json` y de las reglas universales de `memory/global_rules.json`.
+  un digest de `memory/user_profile.json` y de las reglas universales de `memory/global_rules.json`;
+  hooks `UserPromptSubmit`/`PostToolUse` (`scripts/context_hook.py`) suman el digest del repo o
+  cliente la primera vez que la sesión lo toca.
 - Antes de razonar sobre memoria, skills o el flujo Jira/PR más allá de este resumen, leer
   `agent-context.md` — Claude no lo carga solo.
 

@@ -71,30 +71,25 @@ immediately, don't wait for closing:
 WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
 [ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-jq empty $WS/memory/global_rules.json 2>/dev/null || echo '{"rules":[]}' > $WS/memory/global_rules.json
-cat $WS/memory/global_rules.json
+python3 $WS/scripts/memory_store.py similar-rules --rule "<rule text derived from the correction>" --tags "<repo,…|empty for universal>"
 ```
 
-Same dedup logic as `m-dev-reflect` Step 7.2 (canonical — read it there, not restated here), **including
-its structured similarity pre-check** — run that before judging reinforcement vs. supersede vs.
-genuinely new, don't skip straight to the open-ended call. The only difference from the closing-mode
-write: `confidence` starts at **`0.9`** (not `0.6`) and `source` is `"live_correction"` (not
-`"retrospective"`) — a direct correction deserves more weight than a retrospective inference from the
-first mention.
+Same dedup logic as `m-dev-reflect` Step 7.2 (canonical — read it there, not restated here): judge the
+printed candidates as reinforcement vs. supersede vs. genuinely new, don't skip straight to the
+open-ended call. The only difference from the closing-mode write: `--source live_correction`, which
+starts `confidence` at **`0.9`** (not `0.6`) — a direct correction deserves more weight than a
+retrospective inference. Genuinely new:
 
 ```bash
-jq --argjson entry '{
-  "id": "<TICKET_ID>-r<n>",
-  "rule": "<rule text derived from the correction>",
-  "origin_ticket": "<TICKET_ID>",
-  "type": "avoid|prioritize|verify",
-  "tags": ["<repo, or omit for a universal process rule>"],
-  "status": "active",
-  "confidence": 0.9,
-  "source": "live_correction"
-}' '.rules += [$entry]' \
-  $WS/memory/global_rules.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/global_rules.json
+python3 $WS/scripts/memory_store.py add-rule --source live_correction --ticket "<TICKET_ID or SESSION-YYYY-MM-DD>" \
+  --type avoid|prioritize|verify --tags "<repo,… or empty for a universal process rule>" \
+  --rule "<rule text derived from the correction>"
 ```
+
+All memory writes go through `scripts/memory_store.py` (lock + atomic write + schema check, never
+resets a file it can't parse) — never `jq … > memory/…`. Tag with the repo name; for client- or
+topic-level rules use the client folder name (`AcmeCorp`) or a topic (`nginx`, `ci-cd`) — see
+`python3 $WS/scripts/memory_query.py -h` for how tags are matched.
 
 One line, no ceremony: *"Guardé esto como regla en memoria para no repetirlo."* — same tone as the local
 scripting convention's confirmation line.

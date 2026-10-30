@@ -215,22 +215,16 @@ def workspace_root():
     return g
 
 WS = workspace_root()
-os.makedirs(f'{WS}/memory/review_rounds', exist_ok=True)
-path = f'{WS}/memory/review_rounds/<TICKET_ID>.json'
-try:
-    data = json.load(open(path))
-except Exception:
-    data = {'ticket_id': '<TICKET_ID>', 'rounds': []}
+import sys
+sys.path.insert(0, f'{WS}/scripts')
+from memory_store import update_json  # locked read-modify-write; refuses to reset a file it can't parse
 
-data['rounds'].append({
+update_json('review_rounds/<TICKET_ID>.json', lambda data: data['rounds'].append({
     'round': len(data['rounds']) + 1,
     'date': datetime.datetime.utcnow().isoformat() + 'Z',
     'comments': ['<each review comment — one string per comment>'],
     'changes': []
-})
-
-with open(path, 'w') as f:
-    json.dump(data, f, indent=2)
+}), default={'ticket_id': '<TICKET_ID>', 'rounds': []}, compile_after=False)
 ```
 
 1. Analyze each comment and determine the fix.

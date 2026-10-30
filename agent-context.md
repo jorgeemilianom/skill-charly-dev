@@ -37,33 +37,70 @@ preferencias aprendidas por sesión están en `memory/user_profile.json` (en Cla
 
 ## Memoria del workspace
 
-La memoria compartida de este workspace vive en:
+La memoria compartida de este workspace vive en `memory/` (raíz del workspace, gitignored, no por
+repo). Es un dato compartido entre sesiones concurrentes y usuarios de OS, así que
+tiene un único camino de escritura y uno de lectura:
 
-`memory/` (raíz del workspace, al lado de `CLAUDE.md` — no por repo)
+| Script (`scripts/`) | Rol |
+|---|---|
+| `memory_store.py` | **Único camino de escritura.** Lock (`memory/.lock`), temp único + `os.replace`, validación de schema, ids `<TICKET>-r<n>` asignados bajo lock. Nunca reinicializa un archivo que existe pero no parsea: aborta con exit 2. `-h` lista los comandos (`add-rule`, `similar-rules`, `reinforce-rule`, `set-rule`, `upsert-pattern`, `add-decision`, `add-mistake`, `ticket-learning`, `write`, `validate`, `stats`, `backup`). Desde Python: `from memory_store import update_json, locked, write_json_atomic`. |
+| `memory_query.py` | Lectura rankeada y con presupuesto: alcance (repo exacto > cliente/alias > tema > universal) × confianza × antigüedad + refuerzos + relevancia del texto de la tarea. `--detect "<path o texto>"` resuelve repos/clientes. |
+| `memory_compile.py` | Regenera `memory/compiled/{repo,client}-<nombre>.md` y `universal.md` tras cada escritura. Derivado: no editar. |
+| `context_hook.py` | Hooks `UserPromptSubmit`/`PostToolUse` de Claude: inyecta el digest compilado la primera vez que la sesión toca `projects/<repo>`/`worktrees/<repo>-…` o nombra un cliente. |
+| `session_context.py` | Hook `SessionStart`: digest de perfil + reglas universales ≥ 0.8, digest del repo del `cwd`, avisos (archivo corrupto, consolidación vencida), backup diario. |
+| `memory_consolidate.py` / `memory_migrate.py` | Preparar la consolidación periódica (`/m-memory consolidate`) / upgrade idempotente del schema. |
 
-Archivos que las skills `/m-dev-*` leen y escriben:
+**Nunca** escribir `memory/*.json` con `jq … > archivo`, `echo > archivo` ni `open(…, 'w')`.
 
-- `memory/user_profile.json` — preferencias de comunicación/workflow, cargado por `/m-dev` al inicio de cada ticket.
-- `memory/epics.json` — lista de epics cacheada para el project key en `config.sh`, mantenida por `/m-dev-create` para no re-consultar los epics en cada sesión.
-- `memory/snapshots/<TICKET>.json` — checkpoints escritos por `/m-dev-reflect`, leídos por `/m-dev`, `/m-dev-resume`, `/m-dev-status`.
-- `memory/assessments/<TICKET>.json` — assessments técnicos escritos por `/m-dev-assess`.
-- `memory/vps-config.json` — configuración de conexión a la VPS de producción para `/m-dev-db-sync`.
-- `memory/review_rounds/<TICKET>.json` — historial de revisiones de PR escrito por `/m-dev-pr`.
-- `memory/infra/` — `/m-infra-clean`: `inventory.json` (hosts derivados de `Business/`, sin secretos), `runs/<alias>/` (corridas crudas redactadas + hallazgos JSON, últimas 12), `last-run.json` (resumen que lee `/m-manager-digest`).
-- `memory/db-backups/` — snapshots de DB descargados desde `/m-dev-db-sync`.
-- `memory/patterns.json`, `memory/decisions.json`, `memory/mistakes.json`, `memory/global_rules.json` — aprendizajes cross-ticket escritos por `/m-dev-reflect`, recuperados por `/m-dev-assess` **filtrados** por `tags` (nombres de repo + keywords; `tags` vacío = universal, siempre incluido) para que una memoria creciente no vuelque historial irrelevante en cada ticket. Las entradas de `global_rules.json` también llevan `status` (`active`/`superseded`), `confidence` (`≥0.8` = aplicar por defecto, `<0.4` = omitir), y `source` (`live_correction` = capturada directamente de una corrección del usuario, confidence `0.9`; `retrospective` = inferida al cierre de `/m-dev-reflect`, confidence `0.6`).
+Contenido:
 
-Las escrituras a memoria son parte del workflow compartido — ambos agentes pueden actualizar archivos
-de `memory/` directamente como persistencia local de memoria, incluyendo capturar una corrección en
-vivo en `global_rules.json` en el momento en que el usuario corrige un enfoque en curso (ver "Capture
-Corrections as They Happen" en `skills/m-dev/SKILL.md` — no esperar a que `/m-dev-reflect` la
-reconstruya retrospectivamente). Preguntar antes de transiciones o comentarios de Jira, salvo que el
-usuario haya pedido explícitamente el flujo que los incluye (ej. modo closing de `/m-dev-reflect`,
-`/m-dev-assess`).
+- `global_rules.json` — reglas cross-ticket. Campos: `id`, `rule`, `type` (`avoid`/`prioritize`/`verify`),
+  `tags`, `status` (`active`/`superseded`/`archived`), `confidence` (`≥0.8` = enfoque por defecto,
+  `<0.4` = se omite), `source` (`live_correction` 0.9 = corrección directa del usuario, capturarla en
+  el momento — ver "Capture Corrections as They Happen" en `skills/m-dev/SKILL.md`; `retrospective`
+  0.6 = inferida en `/m-dev-reflect`), `created_at`, `last_seen`, `reinforced_count`.
+- `patterns.json`, `decisions.json`, `mistakes.json` — aprendizajes cross-ticket de `/m-dev-reflect`.
+- `user_profile.json` — preferencias y `self_model` (puntos ciegos recurrentes).
+- `tickets/<TICKET>.json` (resumen + aprendizajes de cierre) y `snapshots/<TICKET>.json` (checkpoint
+  para retomar: fase, próximo paso, bloqueos) — propósitos distintos, por eso conviven;
+  `assessments/<TICKET>.json`, `review_rounds/<TICKET>.json`.
+- `epics.json`, `board.json`, `vps-config.json` — caches/config de `/m-dev-create`, `/m-dev-status`,
+  `/m-dev-db-sync`. `infra/` — `/m-infra-clean`. `db-backups/` — dumps de `/m-dev-db-sync` (no es
+  memoria: excluido de backups y digests).
+- `tag_aliases.json` (opcional) — alias de tags: cliente → repos (se suma a los `client.md`),
+  tag → repos, tema → palabras clave. `consolidation/last.json` — última consolidación.
+- `.backups/` — `memory-<fecha>.tar.gz`, uno por día (automático), se guardan 14.
 
-Índice de memoria de proyecto de Claude importado (legacy — preferir `memory/` para aprendizajes
-nuevos salvo que el usuario pida explícitamente actualizar la memoria de Claude): ver
-`CLAUDE_MEMORY_INDEX` en `config.sh`.
+**Tags:** el nombre del repo (`backend-api`), el de la carpeta del cliente en `Business/`
+(`AcmeCorp`) o un tema (`nginx`, `ci-cd`, `infra`, `docker`, `testing`, `workspace-environment`…).
+Sin tags = universal.
+
+### Dónde va cada cosa (cuatro lugares, sin solaparse)
+
+| Tipo de conocimiento | Lugar |
+|---|---|
+| Regla de comportamiento del agente, cross-ticket, derivada de una corrección o un cierre | `memory/` vía `memory_store.py` (canónico para Claude y Codex) |
+| Lección técnica durable de un repo concreto, que el equipo debería ver versionada | `projects/<repo>/ia-memory/` o el `CLAUDE.md` del repo (`/m-memory consolidate` propone promover reglas maduras ahí) |
+| Conocimiento estable de un cliente (negocio, playbooks de infra, credenciales) | `Business/<cliente>/` |
+| Auto-memoria de Claude (`~/.claude/projects/.../memory/`) | Solo identidad del usuario y punteros; una regla nueva va a `memory/`, no ahí. Legacy para Codex: `CLAUDE_MEMORY_INDEX` en `config.sh`. |
+
+### Cómo llega la memoria a cada sesión
+
+- **Claude:** automático — `SessionStart` (digest general), y el primer contacto con un repo o
+  cliente (digest compilado). `/m-dev-assess` además consulta `memory_query.py --text "<ticket>"`.
+- **Codex** (no corre hooks): paso 3 del orden de carga, y al empezar a trabajar en un repo o cliente
+  leer `memory/compiled/repo-<repo>.md` / `client-<cliente>.md` (o correr `memory_query.py`).
+
+### Mantenimiento
+
+`/m-memory` (`skills/m-memory/SKILL.md`): `stats`, `query`, `backup`, `restore`, y `consolidate` —
+el pase periódico (el digest de arranque avisa cada 14 días) que fusiona duplicados semánticos
+(también entre idiomas), archiva retrospectivas viejas sin refuerzo, arregla tags huérfanos y propone
+promover reglas maduras al repo. Nunca se borra una entrada: `superseded`/`archived` son reversibles.
+
+Las escrituras a memoria son parte del workflow compartido y locales — no requieren confirmación.
+Preguntar antes de transiciones o comentarios de Jira, salvo que el usuario haya pedido explícitamente
+el flujo que los incluye (ej. modo closing de `/m-dev-reflect`, `/m-dev-assess`).
 
 ## Contexto de negocio (`Business/`)
 
@@ -107,6 +144,7 @@ correspondiente y ejecutar ese workflow con los argumentos del usuario como `$AR
 | Digest consolidado dev+clientes (fusión de m-dev-status + m-manager-status) | `skills/m-manager-digest/SKILL.md` |
 | Ejecutar una tarea en la infraestructura remota de un cliente (SSH/VPS), sin repo local | `skills/m-manager-exec/SKILL.md` |
 | Mantenimiento de la infra registrada: auditoría de logs/accesos/anomalías/vulnerabilidades/backups, fixes con OK, cron de relevamiento | `skills/m-infra-clean/SKILL.md` |
+| Estado, consulta, backup/restore y consolidación periódica de la memoria del harness | `skills/m-memory/SKILL.md` |
 | Conversar un requerimiento de cliente / listar clientes conocidos / rutear a cualquiera de las anteriores | `skills/m-manager/SKILL.md` |
 
 `skills/m-dev/SKILL.md` es el orquestador: cuando un pedido no matchea claramente ninguna de las otras
@@ -159,9 +197,8 @@ conservar, escribilo ahí y registralo en el manifest. Convención completa:
     multi-repo): sin flag equivalente directo en Codex. Si realmente hace falta trabajo simultáneo
     entre repos, o correr sesiones de Codex secuencialmente por repo, o armar vos mismo las copias
     aisladas primero con `git worktree add <path> <branch>` antes de arrancar Codex en cada una.
-  - Si `jq` no está disponible en el entorno (varias skills leen/escriben `memory/*.json` vía `jq`),
-    usar el módulo `json` de Python para el mismo read-modify-write en vez de saltear la actualización
-    de memoria.
+  - Hooks de `.claude/settings.json` (`SessionStart`, `UserPromptSubmit`, `PostToolUse`): Codex no los
+    corre — ver "Cómo llega la memoria a cada sesión" arriba para el equivalente manual.
 
 Preservar cada gate de seguridad escrito en los archivos de skills: preguntar antes de operaciones
 destructivas, antes de pushes, antes de transiciones/comentarios de Jira, y antes de cualquier otro

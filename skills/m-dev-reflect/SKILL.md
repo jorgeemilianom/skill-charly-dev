@@ -155,9 +155,11 @@ snapshot = {
     'blockers': ['<anything blocking progress — empty list if none>']
 }
 
-path = f'{WS}/memory/snapshots/<TICKET_ID>.json'
-with open(path, 'w') as f:
-    json.dump(snapshot, f, indent=2)
+import sys
+sys.path.insert(0, f'{WS}/scripts')
+from memory_store import locked, write_json_atomic  # lock + atomic replace
+with locked():
+    write_json_atomic('snapshots/<TICKET_ID>.json', snapshot)
 ```
 
 Print a one-line confirmation:
@@ -185,13 +187,13 @@ def workspace_root():
     return g
 
 WS = workspace_root()
-profile_path = f'{WS}/memory/user_profile.json'
+import sys
+sys.path.insert(0, f'{WS}/scripts')
+import memory_store as ms
 
-try:
-    with open(profile_path) as f:
-        profile = json.load(f)
-except Exception:
-    profile = {
+# Missing file -> the default below. Existing but unparseable -> ms.MemoryCorrupt is raised: skip
+# this step (and tell the user at the end) instead of resetting a profile built over many sessions.
+profile = ms.read_json('user_profile.json', default={
         'last_updated': '',
         'session_count': 0,
         'communication': {
@@ -214,7 +216,7 @@ except Exception:
             'preferred_terms': {},
             'jargon': []
         }
-    }
+    })
 
 profile['session_count'] = profile.get('session_count', 0) + 1
 profile['last_updated'] = datetime.datetime.utcnow().isoformat() + 'Z'
@@ -242,11 +244,13 @@ Infer and update each category from observable evidence in this cycle:
 - Domain jargon not in standard Go/React vocabulary → add to `jargon`
 
 ```python
-with open(profile_path, 'w') as f:
-    json.dump(profile, f, indent=2)
+with ms.locked():
+    ms.write_json_atomic('user_profile.json', profile)
 ```
 
-If I/O fails, continue silently — never surface this error.
+If I/O fails, continue silently — never surface this error. Exception: `ms.MemoryCorrupt` (the
+profile exists but doesn't parse) — skip the write and mention it in one line at the end, so the
+user can restore it (`/m-memory restore user_profile.json`).
 
 **Self-model recompute** (cheap, run every cycle — same silent, no-confirmation-needed spirit as
 the rest of this step): re-derive the recurring cross-ticket blind spots from the memory files
@@ -255,13 +259,14 @@ just written and merge them into the same profile.
 ```bash
 python3 "$WS/scripts/self_model.py" "$WS/memory" > /tmp/self_model_$$.json 2>/dev/null || echo '[]' > /tmp/self_model_$$.json
 python3 -c "
-import json
-profile = json.load(open('$WS/memory/user_profile.json'))
-profile['self_model'] = {
-    'top_blind_spots': json.load(open('/tmp/self_model_$$.json')),
-    'last_computed': __import__('datetime').datetime.utcnow().isoformat() + 'Z',
-}
-json.dump(profile, open('$WS/memory/user_profile.json', 'w'), indent=2)
+import json, sys, datetime
+sys.path.insert(0, '$WS/scripts')
+import memory_store as ms
+spots = json.load(open('/tmp/self_model_$$.json'))
+ms.update_json('user_profile.json', lambda p: p.update(self_model={
+    'top_blind_spots': spots,
+    'last_computed': datetime.datetime.utcnow().isoformat() + 'Z',
+}), compile_after=False)
 "
 rm -f /tmp/self_model_$$.json
 ```
@@ -340,22 +345,9 @@ WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
 [ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
-jq empty $WS/memory/patterns.json 2>/dev/null || echo '{"patterns":[]}' > $WS/memory/patterns.json
-
-jq --arg pattern "<detected pattern description>" \
-   --arg type "error|success" \
-   --arg ticket "<TICKET_ID>" \
-   --argjson tags '["<repo, or omit for a universal pattern>"]' '
-  if any(.patterns[]; .pattern == $pattern)
-  then .patterns |= map(
-    if .pattern == $pattern
-    then .frequency += 1 | .confidence = [(.confidence + 0.1), 0.95] | min
-      | .origin_tickets = ((.origin_tickets // []) + [$ticket] | unique)
-    else . end
-  )
-  else .patterns += [{"pattern": $pattern, "type": $type, "frequency": 1, "confidence": 0.5, "tags": $tags, "origin_tickets": [$ticket]}]
-  end
-' $WS/memory/patterns.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/patterns.json
+# Upsert: same text -> frequency += 1, confidence += 0.1 (cap 0.95), ticket added to origin_tickets
+python3 $WS/scripts/memory_store.py upsert-pattern --type error|success --ticket "<TICKET_ID>" \
+  --tags "<repo,… or empty for a universal pattern>" --pattern "<detected pattern description>"
 ```
 
 `origin_tickets` (added alongside `frequency`) is what lets `scripts/self_model.py` tell "the same
@@ -380,17 +372,8 @@ WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
 [ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
-jq empty $WS/memory/decisions.json 2>/dev/null || echo '{"decisions":[]}' > $WS/memory/decisions.json
-
-jq --argjson entry '{
-  "context": "<TICKET_ID>",
-  "decision": "<short description>",
-  "outcome": "success|partial|failure",
-  "score": 0.0,
-  "timestamp": "<ISO 8601>",
-  "tags": ["<repo, or omit for a universal decision>"]
-}' '.decisions += [$entry]' \
-$WS/memory/decisions.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/decisions.json
+python3 $WS/scripts/memory_store.py add-decision --context "<TICKET_ID>" --outcome success|partial|failure \
+  --score 0.0 --tags "<repo,… or empty for a universal decision>" --decision "<short description>"
 ```
 
 ---
@@ -416,17 +399,9 @@ while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.examp
 ### 7.1 — Save detected errors (only if found in Step 3b)
 
 ```bash
-jq empty $WS/memory/mistakes.json 2>/dev/null || echo '{"mistakes":[]}' > $WS/memory/mistakes.json
-
-jq --argjson entry '{
-  "ticket": "<TICKET_ID>",
-  "description": "<description of the detected error>",
-  "context": "<code area or phase where it occurred>",
-  "tags": ["<repo, or omit for a universal process rule>"]
-}' '
-  if any(.mistakes[]; .ticket == $entry.ticket and .description == $entry.description)
-  then . else .mistakes += [$entry] end
-' $WS/memory/mistakes.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/mistakes.json
+python3 $WS/scripts/memory_store.py add-mistake --ticket "<TICKET_ID>" \
+  --context "<code area or phase where it occurred>" --tags "<repo,… or empty for a universal process rule>" \
+  --description "<description of the detected error>"
 ```
 
 ### 7.2 — Save new rules (with supersede-on-write dedup)
@@ -435,118 +410,53 @@ This section is canonical for the dedup mechanism — `m-dev/SKILL.md`'s "Captur
 Happen" points back here rather than restating it, only differing in `confidence`/`source` (0.9 /
 `live_correction` there vs. 0.6 / `retrospective` here).
 
-```bash
-jq empty $WS/memory/global_rules.json 2>/dev/null || echo '{"rules":[]}' > $WS/memory/global_rules.json
-cat $WS/memory/global_rules.json
-```
-
-**Run the structured similarity pre-check below before judging — do not skip straight to "genuinely
-new."** This project's own history shows why: 18 active rules accumulated, every single one still at
-its initial 0.6 confidence, zero ever marked `superseded` — the open-ended "does this look familiar?"
-judgment call never once matched an existing rule, even when it plausibly should have. Contrast that
-with `patterns.json`'s dedup, which uses exact-string matching instead of open judgment and *has*
-reinforced entries. The fix isn't to trust the judgment harder — it's to force a concrete candidate into
-view so there's something specific to accept or reject, instead of an abstract absence to default past:
+**Run the similarity pre-check before judging — do not skip straight to "genuinely new."** History
+shows why: with an open-ended "does this look familiar?" call, 126 of 137 active rules were never
+reinforced and almost none ever superseded. Forcing concrete candidates into view gives something
+specific to accept or reject instead of an abstract absence to default past. The pre-check scores
+`max(Jaccard, containment)` over significant words (Spanish + English stopwords), so a short
+restatement of a long rule still surfaces:
 
 ```bash
-python3 -c "
-import json, re
-
-new_rule = '''<rule text derived from this cycle>'''
-tags = [<new-rule-tags-as-python-strings>]  # e.g. ['internal-platform'] — empty list for a universal rule
-
-STOP = {'the','a','an','in','on','of','to','and','or','for','with','is','are','be','not','it','this'}
-def words(t):
-    return set(re.findall(r'[a-zA-Z0-9_]+', t.lower())) - STOP
-
-data = json.load(open('$WS/memory/global_rules.json'))
-new_w = words(new_rule)
-best = None
-for r in data['rules']:
-    if r.get('status') != 'active':
-        continue
-    r_tags = r.get('tags', [])
-    if r_tags and tags and not (set(r_tags) & set(tags)):
-        continue
-    overlap = len(new_w & words(r['rule'])) / max(1, len(new_w | words(r['rule'])))
-    if best is None or overlap > best[1]:
-        best = (r, overlap)
-
-if best and best[1] >= 0.25:
-    print(f\"CANDIDATE ({best[1]:.0%} word overlap) [{best[0]['id']}]: {best[0]['rule']}\")
-else:
-    print('NO CANDIDATE — proceed as genuinely new')
-"
+python3 $WS/scripts/memory_store.py similar-rules --tags "<repo,… or empty>" --rule "<rule text derived from this cycle>"
 ```
 
-If a candidate is printed, you **must** explicitly decide, for that specific rule (not in the
+For each printed candidate you **must** explicitly decide, for that specific rule (not in the
 abstract): is the new observation **(a)** the same thing restated, **(b)** a refinement that should
-supersede it, or **(c)** actually different despite the word overlap? Only fall through to "genuinely
-new" after explicitly ruling out the printed candidate. If no candidate was printed, append as
-genuinely new directly — the threshold (0.25) is a starting point, not a hard science; adjust it if it
-proves too loose or too strict in practice.
+supersede it, or **(c)** actually different despite the overlap? Word overlap can't see a paraphrase
+in another language — if you remember an equivalent rule that wasn't printed, treat it as a candidate
+too. Only fall through to "genuinely new" after explicitly ruling them out.
 
-**(a) Reinforcement** — bump the existing entry instead of duplicating:
+**(a) Reinforcement** — bump the existing entry instead of duplicating (+0.1 confidence, cap 0.95,
+`reinforced_count`++, `last_seen` = today; `--tags` widens its scope if this ticket is another repo):
 ```bash
-jq --arg id "<existing-rule-id>" '
-  .rules |= map(if .id == $id then
-    .confidence = ([(.confidence + 0.1), 0.95] | min) | .reinforced_count = ((.reinforced_count // 0) + 1)
-  else . end)
-' $WS/memory/global_rules.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/global_rules.json
+python3 $WS/scripts/memory_store.py reinforce-rule <existing-rule-id> --ticket "<TICKET_ID>" [--tags "<repo>"]
 ```
 
-**(b) Supersede** — mark the old entry, then append the new one (id: next `<TICKET_ID>-r<n>` for this ticket):
+**(b) Supersede** — marks the old entry `superseded` and appends the new one in a single locked write:
 ```bash
-jq --arg old_id "<existing-rule-id>" --arg new_id "<TICKET_ID>-r<n>" '
-  .rules |= map(if .id == $old_id then .status = "superseded" | .superseded_by = $new_id else . end)
-' $WS/memory/global_rules.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/global_rules.json
-
-jq --argjson entry '{
-  "id": "<TICKET_ID>-r<n>",
-  "rule": "<rule text>",
-  "origin_ticket": "<TICKET_ID>",
-  "type": "avoid|prioritize|verify",
-  "tags": ["<repo, or omit for a universal process rule>"],
-  "status": "active",
-  "confidence": 0.6,
-  "source": "retrospective"
-}' '.rules += [$entry]' \
-  $WS/memory/global_rules.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/global_rules.json
+python3 $WS/scripts/memory_store.py add-rule --supersedes <existing-rule-id> --source retrospective \
+  --ticket "<TICKET_ID>" --type avoid|prioritize|verify --tags "<repo,… or empty>" --rule "<rule text>"
 ```
 
-**(c) Genuinely new** — same append as (b) without the supersede step, `id` is `<TICKET_ID>-r1` for the
-first rule from this ticket (increment per additional rule in the same cycle).
+**(c) Genuinely new** — same as (b) without `--supersedes`. The id (`<TICKET_ID>-r<n>`, next free one)
+is assigned under the lock and printed — never pick it by hand (that's how duplicate ids appeared).
 
 ### 7.3 — Save ticket learning
 
 ```bash
-mkdir -p $WS/memory/tickets
-jq empty $WS/memory/tickets/<TICKET_ID>.json 2>/dev/null || echo '{"summary":"","decisions":[],"learnings":[]}' > $WS/memory/tickets/<TICKET_ID>.json
-
-jq --arg summary "<one-line summary of what was implemented>" \
-   --arg learning "<concrete learning from this cycle>" '
-  .summary = $summary |
-  if any(.learnings[]; . == $learning) then . else .learnings += [$learning] end
-' $WS/memory/tickets/<TICKET_ID>.json > $WS/memory/tmp.json && mv $WS/memory/tmp.json $WS/memory/tickets/<TICKET_ID>.json
+python3 $WS/scripts/memory_store.py ticket-learning "<TICKET_ID>" \
+  --summary "<one-line summary of what was implemented>" --learning "<concrete learning from this cycle>"
 ```
 
 ### 7.4 — Save detected patterns
 
-Run the upsert from Step 4. If `jq` is unavailable:
+Run the upsert from Step 4.
 
-```bash
-python3 -c "
-import json, sys, os
-path = sys.argv[1]
-key = sys.argv[2]
-entry = json.loads(sys.argv[3])
-data = json.load(open(path)) if os.path.exists(path) and open(path).read().strip() else {key: []}
-if entry not in data.get(key, []): data.setdefault(key, []).append(entry)
-json.dump(data, open(path, 'w'), indent=2)
-"
-```
-
-Do not interrupt the flow for I/O errors — if both fail, continue silently.
+All writes above go through `scripts/memory_store.py` (lock, atomic replace, schema check, compiled
+digests regenerated). Exit code 2 means a memory file exists but doesn't parse — the write was
+refused on purpose instead of resetting it: mention it in one line at the end (`/m-memory restore`)
+and continue the closing. Any other I/O error: continue silently.
 
 ---
 
