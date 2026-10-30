@@ -39,9 +39,14 @@ CLIENTE="<cliente>"
 [ -f "$WS/Business/$CLIENTE/Agent.md" ] && cat "$WS/Business/$CLIENTE/Agent.md"
 cat "$WS/Business/$CLIENTE/context.md" 2>/dev/null
 cat "$WS/Business/$CLIENTE/client.md" 2>/dev/null
+python3 "$WS/scripts/cognition.py" context --clients "$CLIENTE" --budget 2000
 ```
 
 If `MISSING`: say so and offer `/m-manager-create <cliente>`. Stop here.
+
+The `cognition.py` block is the agent's continuity with this client — open goals (commitments),
+pending predictions, evaluated experiences. Surface open commitments under "Propuestas"; a goal whose
+next action no longer fits the client's current state is itself worth flagging.
 
 ### Step 2 — Pull linked dev/Jira state (only if `client.md` has a manifest)
 

@@ -253,23 +253,16 @@ profile exists but doesn't parse) — skip the write and mention it in one line 
 user can restore it (`/m-memory restore user_profile.json`).
 
 **Self-model recompute** (cheap, run every cycle — same silent, no-confirmation-needed spirit as
-the rest of this step): re-derive the recurring cross-ticket blind spots from the memory files
-just written and merge them into the same profile.
+the rest of this step): re-derive the recurring cross-ticket blind spots and store them as the
+agent's own model in `memory/cognition.json` (not in the user's profile — the legacy
+`user_profile.self_model` stays as read-only history):
 
 ```bash
-python3 "$WS/scripts/self_model.py" "$WS/memory" > /tmp/self_model_$$.json 2>/dev/null || echo '[]' > /tmp/self_model_$$.json
-python3 -c "
-import json, sys, datetime
-sys.path.insert(0, '$WS/scripts')
-import memory_store as ms
-spots = json.load(open('/tmp/self_model_$$.json'))
-ms.update_json('user_profile.json', lambda p: p.update(self_model={
-    'top_blind_spots': spots,
-    'last_computed': datetime.datetime.utcnow().isoformat() + 'Z',
-}), compile_after=False)
-"
-rm -f /tmp/self_model_$$.json
+python3 "$WS/scripts/self_model.py" --refresh
 ```
+
+Exit 2 means a memory file couldn't be read: the stored model is left as it was (never replaced by
+an empty list) — mention it in one line at the end.
 
 Empty `top_blind_spots` is a normal, valid result — it means nothing has independently recurred
 across 2+ distinct tickets yet, not that the mechanism is broken. Don't force a result to appear
@@ -452,6 +445,32 @@ python3 $WS/scripts/memory_store.py ticket-learning "<TICKET_ID>" \
 ### 7.4 — Save detected patterns
 
 Run the upsert from Step 4.
+
+### 7.5 — Contrast experiences, update goals, refresh the self-model (both modes when there's evidence)
+
+Follow the cognitive protocol in `agent-context.md` ("Protocolo cognitivo"). After the learnings above are saved:
+
+1. **Evaluate this ticket's pending predictions** — the ones registered in `/m-dev-assess` or during
+   development:
+   ```bash
+   python3 $WS/scripts/cognition.py status | python3 -c "import json,sys;[print(e) for e in json.load(sys.stdin)['episodes']['pending']]"
+   ```
+   For each one whose result is now known, record what happened — `observation` (facts), `interpretation`
+   (a possible explanation, not a certainty), `adjustment` (what to do differently), `evidence`
+   (verifiable refs: CI run, PR, commit, log line, Jira comment) and `outcome` (`true`/`false`, or `null`
+   if it can't be determined — never force a verdict):
+   ```bash
+   echo '{"id":"ep-0007","observation":"...","interpretation":"...","adjustment":"...","evidence":["PR #42","CI run 123"],"outcome":false}' \
+     | python3 $WS/scripts/memory_store.py cognitive evaluate
+   ```
+   Still unknown (e.g. depends on prod traffic) → leave it pending and say so. Evaluations are final;
+   to correct one, register a new experience with `"corrects": "<id>"`.
+2. **Goals** — close what this ticket fulfilled (`update-goal` with `status: done` + `evidence`), block
+   what's waiting on someone (`blocked_reason`), or open a goal for a commitment that outlives the
+   session (follow-up, monitoring, a promised check). Never mark done without evidence.
+3. **Beliefs** — only when 2+ evaluated episodes support the same claim (or one contradicts an active
+   belief): `belief` (with `supersedes` to revise one). Confidence can't exceed what the evidence allows.
+4. `python3 "$WS/scripts/self_model.py" --refresh` (after the writes above, so it sees them).
 
 All writes above go through `scripts/memory_store.py` (lock, atomic replace, schema check, compiled
 digests regenerated). Exit code 2 means a memory file exists but doesn't parse — the write was

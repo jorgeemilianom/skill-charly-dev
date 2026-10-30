@@ -4,7 +4,9 @@
 Claude Code auto-loads CLAUDE.md, but not memory/ — so without this, user preferences and
 cross-ticket rules only reach the agent when a /m-dev* skill happens to read them. Prints to stdout
 (Claude Code adds it to the session context; Codex runs it by hand, step 3 of agent-context.md):
-  - user_profile.json: communication prefs, workflow notes, recurring blind spots
+  - user_profile.json: communication prefs, workflow notes
+  - cognition.json (scripts/cognition.py): the agent's identity, blind spots, pending predictions,
+    open goals, relevant evaluated experiences and the read-only `tick` proposals
   - global_rules.json: universal active rules with confidence ≥ 0.8
   - the compiled digest of the repo the session starts in, if any (memory/compiled/)
   - warnings: a memory file that no longer parses, a consolidation pass overdue
@@ -106,10 +108,14 @@ def main():
         out.append("Notas de workflow del usuario:")
         out += [f"- {k}: {clip(v)}" for k, v in notes.items()]
 
-    spots = (profile.get("self_model") or {}).get("top_blind_spots") or []
-    if spots:
-        out.append("Puntos ciegos recurrentes del agente (evitarlos):")
-        out += [f"- {clip(s.get('statement', ''))}" for s in spots if s.get("statement")]
+    # The agent's own model (identity, blind spots, pending predictions, open goals, lessons) comes
+    # from memory/cognition.json; before it exists, cognition.py falls back to the legacy
+    # user_profile.self_model read-only. Once migrated, cognition.json takes precedence.
+    try:
+        import cognition
+        cog = cognition.session_digest(budget=1800)
+    except Exception:
+        cog = ""
 
     rules = (load("global_rules.json") or {}).get("rules") or []
     active_universal = [
@@ -132,6 +138,8 @@ def main():
 
     print("[harness skill-charly-dev] Digest de memory/ (generado por scripts/session_context.py):")
     print("\n".join(out))
+    if cog:
+        print("\n" + cog)
     d = cwd_digest(inp)
     if d:
         print("\n" + d)

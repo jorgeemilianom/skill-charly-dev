@@ -425,6 +425,12 @@ make -C projects/internal-platform build   # always rebuild after any Backoffice
 
 Fix any failures before moving on. Do not skip or work around failing tests.
 
+**Contrast predictions with the evidence** (the cognitive protocol in `agent-context.md` ("Protocolo cognitivo")): if `/m-dev-assess` or development
+registered predictions for this ticket (`python3 "$WS/scripts/cognition.py" status` lists pending ones)
+and the validation run just settled one — e.g. "the integration tests pass on the first run" — evaluate
+it now with the run as evidence (`memory_store.py cognitive evaluate`, see `/m-dev-reflect` 7.5). Don't
+evaluate what the validation doesn't actually show; leave it pending.
+
 Background mode for slow test suites: run with Ctrl+B and continue reviewing other files while tests run. (Codex: run sequentially instead — see `agent-context.md`.)
 
 ---

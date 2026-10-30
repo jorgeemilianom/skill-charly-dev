@@ -16,7 +16,13 @@ and a pattern written from the same closing session) do NOT count as recurrence 
 patterns.json doesn't record which ticket(s) produced an entry (see origin_tickets below), so
 single-ticket clusters are common and are deliberately excluded to avoid inflating the signal.
 
-Usage: python3 scripts/self_model.py <path-to-memory-dir>
+Usage:
+  python3 scripts/self_model.py <path-to-memory-dir>   # historic query: print the list, write nothing
+  python3 scripts/self_model.py --refresh              # recompute and store it as the agent's own
+                                                       # blind spots in memory/cognition.json
+--refresh reads strictly: if any source file exists but doesn't parse, it exits 2 and writes nothing
+— a read failure must never replace the stored model with an empty list. The legacy copy in
+user_profile.json's self_model is left as it was (read-only history).
 """
 import json
 import os
@@ -34,6 +40,9 @@ MIN_DISTINCT_TICKETS = 2  # only surface clusters with real cross-ticket recurre
 TOP_N = 3
 
 
+STRICT = False
+
+
 def load(path, default):
     if not os.path.exists(path):
         return default
@@ -41,11 +50,13 @@ def load(path, default):
         with open(path) as f:
             return json.load(f)
     except Exception:
+        if STRICT:
+            raise
         return default
 
 
-def main():
-    mem = sys.argv[1] if len(sys.argv) > 1 else 'memory'
+def main(mem=None):
+    mem = mem or (sys.argv[1] if len(sys.argv) > 1 else 'memory')
     entries = []
 
     rules = load(os.path.join(mem, 'global_rules.json'), {'rules': []})
@@ -116,5 +127,28 @@ def main():
     return scored[:TOP_N]
 
 
+def refresh():
+    global STRICT
+    import datetime
+    import memory_store as ms
+    STRICT = True
+    try:
+        spots = main(ms.MEM)
+    except Exception as e:
+        print(json.dumps({"ok": False, "kind": "read_error",
+                          "error": f"no se pudo leer la memoria ({e}); el modelo guardado no se toca"}, ensure_ascii=False))
+        sys.exit(2)
+    computed_at = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
+    try:
+        result = ms.cognitive("set-blind-spots", {"blind_spots": spots, "computed_at": computed_at})
+    except (ms.MemoryCorrupt, ms.cm.IncompatibleSchema) as e:
+        print(json.dumps({"ok": False, "kind": "corrupt", "error": str(e)}, ensure_ascii=False))
+        sys.exit(2)
+    print(json.dumps({"ok": True, "result": result, "blind_spots": spots}, indent=2, ensure_ascii=False))
+
+
 if __name__ == '__main__':
-    print(json.dumps(main(), indent=2, ensure_ascii=False))
+    if '--refresh' in sys.argv[1:]:
+        refresh()
+    else:
+        print(json.dumps(main(), indent=2, ensure_ascii=False))

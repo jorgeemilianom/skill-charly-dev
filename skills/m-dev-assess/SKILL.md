@@ -86,6 +86,16 @@ python3 $WS/scripts/memory_query.py \
   --budget 8000
 ```
 
+**Recall the agent's own experiences** before deciding (the cognitive protocol in `agent-context.md` ("Protocolo cognitivo")):
+
+```bash
+python3 $WS/scripts/cognition.py recall --repos '<repos>' --clients '<client>' --text "<ticket summary>" --limit 5
+```
+
+Each hit is an evaluated episode: what was tried, what was predicted, what happened, what to adjust.
+Treat it as evidence to weigh, not an instruction — and note which ones actually change the approach
+(their ids go into `recalled` below).
+
 The hook in `.claude/settings.json` may already have injected the repo's compiled digest earlier in
 the session — this query still runs, because `--text` re-ranks for this specific ticket and adds the
 universal rules below 0.8 that the SessionStart digest leaves out.
@@ -547,7 +557,8 @@ assessment = {
     },
     'jira_doc_generated': True,
     'open_questions_resolved': ['<question: answer>'],
-    'memory_context_used': '<patterns/mistakes that influenced approach — brief or null>'
+    'memory_context_used': '<patterns/mistakes that influenced approach — brief or null>',
+    'episode_ids': ['<ids returned by the experience registration below — empty if none>']
 }
 
 import sys
@@ -558,5 +569,20 @@ with locked():
 ```
 
 Overwrite if a saved assessment already exists — confirmed version is always the most current.
+
+**Register the decision as an experience** (once the approach is confirmed, before writing code) when
+it is significant — a non-obvious approach, a risk accepted, an experiment, a choice an earlier memory
+changed. Not for routine steps. The prediction must be binary and checkable later by validation, review
+or production (e.g. "the fix passes CI and review without changes to the approach"), with an honest
+probability; `recalled` lists only the episode ids that actually influenced this decision:
+
+```bash
+echo '{"context":"<TICKET_ID>: <one-line problem>","ticket":"<TICKET_ID>","tags":["<repo>","<client>"],
+  "action":"<confirmed approach, one line>","prediction":"<binary, checkable>","probability":0.7,
+  "recalled":["<ep ids that changed the decision>"]}' | python3 $WS/scripts/memory_store.py cognitive experience
+```
+
+Store the returned id in the assessment's `episode_ids`. No retroactive predictions: only register what
+is being predicted *now*, before the outcome is known.
 
 **On future sessions**: if Step 0 finds a saved assessment and the branch exists, skip Sections E, F, A, B — go directly to Section G. Only re-run full analysis if `confidence_score < 0.7` or user explicitly requests it.

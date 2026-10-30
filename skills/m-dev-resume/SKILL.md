@@ -54,6 +54,16 @@ links, `avatarUrls`), roughly halving its size with no information loss. Worth p
 - `siblings` — other tickets in the same project opened around the same time; only worth mentioning in
   the resume summary if one is clearly related (same component/feature), not as a matter of course.
 
+**Commitments from earlier sessions** (the cognitive protocol in `agent-context.md` ("Protocolo cognitivo")):
+
+```bash
+python3 "$WS/scripts/cognition.py" context --repos '<repos>' --text "<TICKET_ID> <ticket summary>" --budget 2500
+```
+
+Pending predictions and open goals for this scope are commitments made earlier — in Step 3, contrast
+each with the real state (code, branch, PR, CI): evaluate the ones now settled (`/m-dev-reflect` 7.5),
+and flag in the summary any goal whose `next_action` no longer matches reality.
+
 Rename session: `/rename PROJ-XXX | <ticket summary>`
 
 ## Step 2 — Read the actual changes
