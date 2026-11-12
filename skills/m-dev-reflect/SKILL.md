@@ -437,3 +437,11 @@ Aprendizajes: <1-2 lines on what was learned or what to do differently>"
 ```
 
 Jira comment format rule: plain text only. No markdown syntax — no **, no ##, no * or - as bullets, no backticks. Separate sections with blank lines.
+
+## Step 10 — Close the session's context (both modes)
+
+The ticket's state now lives in memory (snapshot, learnings, Jira) — the conversation history is no
+longer needed and every further turn re-reads it. End with one line:
+
+- closing: "Ticket cerrado y guardado. Para lo próximo conviene `/clear` (arranca liviano)."
+- checkpoint: "Checkpoint guardado. Si seguís con otra cosa, `/clear`; para retomar: `/m-dev-resume <TICKET_ID>`."
