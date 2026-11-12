@@ -213,3 +213,13 @@ confirmaciones de siempre.
   sin recuerdos no demuestra causalidad, porque las tareas difieren, y no dice nada sobre conciencia.
 - **El detector de secretos es heurístico.** Ataja los formatos comunes, no todos.
 - **`tick` no es un scheduler:** propone cuando alguien lo invoca.
+
+## Evidencia automática y calibración
+
+El ciclo no depende de que el agente se acuerde de evaluar: `scripts/nightly_learning.sh` (cron diario)
+corre `evidence.py harvest` — junta PRs, CI, rondas de review, retrabajo y reverts de los tickets
+recientes o con predicciones pendientes, y evalúa las que declararon un tag `check:*` verificable — y
+`correction_miner.py`, que lleva las correcciones del usuario de los transcripts al inbox que revisa
+`/m-memory consolidate`. `evidence.py calibration` compara probabilidad predicha vs. acierto por tag; el
+digest de arranque solo muestra los sesgos de ≥0.15 con n≥3. Sigue sin haber predicciones retroactivas:
+la evidencia evalúa predicciones registradas antes del resultado.

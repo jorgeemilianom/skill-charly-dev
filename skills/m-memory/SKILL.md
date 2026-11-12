@@ -82,13 +82,23 @@ documentación versionada del repo, donde lo ve todo el equipo.
 4. **Tags huérfanos** (`orphan_tags`): o se corrige el tag (`set-rule <id> --tags ...`), o se agrega un
    alias en `memory/tag_aliases.json` (`clients` / `repo_aliases` / `topics`, ver `_doc` adentro; crear
    el archivo vía `memory_store.py write tag_aliases.json` si no existe).
-5. **Promoción** (`promote`): estas reglas son conocimiento de un repo concreto que conviene versionar
+5. **Correcciones del usuario** (`memory/corrections/inbox.jsonl`, las llena `scripts/correction_miner.py`
+   desde los transcripts — hook SessionEnd + cron nocturno). Por cada entrada `status: new`: si enseña
+   algo general, `similar-rules` → reforzar/superseder o `add-rule --source live_correction`; si fue puntual
+   (gusto sobre un texto, una pantalla concreta), descartar. `correction_miner.py list` las muestra;
+   cerrarlas con `correction_miner.py mark ruled:<rule-id> <id>…` o `mark discarded <id>…`. Las que traen
+   `violated_injected_rules` son las más importantes: la regla estaba en contexto y no alcanzó.
+6. **Efectividad de reglas** (`memory/evidence/rule_stats.json`): reglas con ≥2 sesiones de `violations`
+   → reescribirlas más concretas o convertirlas en hook/script (una regla que se ignora no sirve como
+   texto). Reglas con `confidence < 0.8` que nunca aparecen en `sessions_injected` en 60 días y nunca
+   reforzadas → candidatas a archivar.
+7. **Promoción** (`promote`): estas reglas son conocimiento de un repo concreto que conviene versionar
    en su `CLAUDE.md` (o en `ia-memory/` si el repo usa esa carpeta). Eso **modifica otro repo** —
    presentar la lista agrupada por repo y pedir OK explícito; con OK, agregarlas en la sección que
    corresponda del `CLAUDE.md` (redactadas como documentación, no como lista de ids) sin commitear, y
    marcar cada una `set-rule <id> --status archived` para que no se inyecte dos veces. Respetar las
    reglas de cada repo para tocarlo (checkout compartido, prod, ramas).
-6. Cerrar:
+8. Cerrar:
    ```bash
    python3 $WS/scripts/memory_consolidate.py --mark-done "<n fusionadas, n archivadas, n promovidas>"
    python3 $WS/scripts/memory_store.py stats

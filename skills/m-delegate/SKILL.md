@@ -37,6 +37,14 @@ Por defecto: **Codex** (`--agent codex`) — consume la cuota de OpenAI, no la d
 la dirección inversa es `--agent claude` (útil para una revisión con otro modelo). `--effort low` para
 tareas mecánicas; `medium` (default de la config) para el resto.
 
+## Elegir agente y esfuerzo con datos
+
+Antes de delegar, `python3 $WS/scripts/delegate.py stats` y `python3 $WS/scripts/evidence.py calibration`:
+- tipo de tarea con veredictos `reworked`/`rejected` repetidos para un agente → no delegarlo (o cambiar de agente);
+- tag/repo donde el delegante sobreestima (sesgo > +0.15) → delegar la parte mecánica pero revisar el diff completo;
+- sin historial: Codex `--effort low` para lo mecánico, `medium` para el resto; `--agent claude --model haiku`
+  para lecturas/resúmenes baratos cuando el delegante es Codex.
+
 ## Flujo
 
 1. **Brief** (en un archivo del scratchpad o por stdin). Corto y cerrado — el otro agente no ve esta
@@ -50,7 +58,7 @@ tareas mecánicas; `medium` (default de la config) para el resto.
    ```
 2. **Predicción** (protocolo cognitivo): una experiencia por delegación —
    `"action":"delegar a codex: <tarea>","prediction":"se acepta sin retrabajo","probability":<honesta>`,
-   tags `["delegation","<agente>","<repo>"]`. Ver `/m-dev-reflect` 7.5 para el formato.
+   tags `["delegation","<agente>","<repo>"]` (el veredicto de `review` es la evidencia: evaluarla a mano en el paso 6). Ver `/m-dev-reflect` 7.5 para el formato.
 3. **Correr**:
    ```bash
    python3 $WS/scripts/delegate.py run --repo projects/<repo> --base <rama del ticket u origin/<base>> \
