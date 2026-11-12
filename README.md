@@ -125,7 +125,7 @@ skill-charly-dev/               (== tu workspace, una carpeta, un repo)
 │   └── local/                  ← gitignored — scripts que las skills se escriben a sí mismas con el tiempo
 ├── agent-context.md            ← trackeado — adaptador compartido Codex/Claude (preferencias, mapa de memoria, mapa de skills)
 ├── AGENTS.md                   ← trackeado — puntero raíz nativo de Codex
-├── CLAUDE.md                   ← trackeado — plantilla de ejemplo de mapa de proyecto, sin secretos
+├── CLAUDE.md                   ← trackeado — reglas transversales + resumen del harness (liviano: se carga en cada sesión); ejemplo de mapa en docs/claude-md-example.md
 ├── CLAUDE.local.md             ← gitignored — tu mapa de proyecto real (importado automáticamente por CLAUDE.md)
 ├── config.example.sh           ← trackeado — plantilla, copiar a config.sh
 ├── config.sh                   ← gitignored — tus valores reales (tampoco tiene secretos — ver Jira abajo)

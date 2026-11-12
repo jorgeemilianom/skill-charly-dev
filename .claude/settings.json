@@ -18,6 +18,11 @@
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/context_hook.py\"",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/context_guard.py\"",
+            "timeout": 5
           }
         ]
       }
@@ -30,6 +35,18 @@
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/context_hook.py\"",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/image_shrink.py\"",
+            "timeout": 30
           }
         ]
       }

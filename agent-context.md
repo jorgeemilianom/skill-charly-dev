@@ -47,6 +47,8 @@ tiene un único camino de escritura y uno de lectura:
 | `memory_query.py` | Lectura rankeada y con presupuesto: alcance (repo exacto > cliente/alias > tema > universal) × confianza × antigüedad + refuerzos + relevancia del texto de la tarea. `--detect "<path o texto>"` resuelve repos/clientes. |
 | `memory_compile.py` | Regenera `memory/compiled/{repo,client}-<nombre>.md` y `universal.md` tras cada escritura. Derivado: no editar. |
 | `context_hook.py` | Hooks `UserPromptSubmit`/`PostToolUse` de Claude: inyecta el digest compilado la primera vez que la sesión toca `projects/<repo>`/`worktrees/<repo>-…` o nombra un cliente. |
+| `context_guard.py` | Hook `UserPromptSubmit`: al cruzar 120k/180k/250k tokens de contexto avisa y pide proponer checkpoint + `/clear` (o `/compact`). La relectura del historial es ~70% del costo. |
+| `image_shrink.py` | Hook `PreToolUse` (Read): capturas png/jpg/webp de más de 250 KB se leen reducidas a ≤1280 px (Pillow vía `uv`). Original: `DISABLE_IMAGE_SHRINK=1`. |
 | `session_context.py` | Hook `SessionStart`: digest de perfil + reglas universales ≥ 0.8, digest del repo del `cwd`, avisos (archivo corrupto, consolidación vencida), backup diario. |
 | `cognition_model.py` / `cognition.py` | Estado propio del agente (`memory/cognition.json`): esquema y operaciones (`memory_store.py cognitive <op>`, JSON por stdin) / lectura (`status`, `context`, `recall`, `metrics`, `tick`). Ver "Protocolo cognitivo" abajo y `docs/cognition.md`. |
 | `self_model.py` | Puntos ciegos recurrentes: `--refresh` los guarda en `cognition.json`; `self_model.py <memdir>` sigue siendo la consulta histórica. |

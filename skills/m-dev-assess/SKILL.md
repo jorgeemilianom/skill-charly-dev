@@ -262,6 +262,14 @@ entry is a mistake verified across 2+ distinct past tickets, not a one-off — e
 backend data, apply that directly instead of rediscovering it mid-implementation. Empty list is normal
 early on — don't fabricate a match that isn't really there.
 
+**Token budget — explore in a subagent, not in the main context.** Everything read here stays in the
+session and is re-read on every later turn. When the exploration needs more than a handful of targeted
+greps/reads (unfamiliar area, several repos, tracing a call chain), launch an `Explore` subagent (one per
+repo, in parallel) with the ticket summary, the keywords and the reading order below, asking for a
+compact answer: files and functions involved (path:line), existing patterns/utilities to reuse,
+cross-project impact, and risks — no file dumps. Read directly only the 1-3 files whose exact content
+the approach depends on. (Codex has no subagents: do the targeted reads sequentially.)
+
 For each affected repo, run grep and git log in parallel. Use keywords from the ticket title/description.
 
 **backend-api:**
