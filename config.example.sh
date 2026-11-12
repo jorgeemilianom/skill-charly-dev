@@ -47,9 +47,20 @@ export DB_SYNC_REPOS=""
 export CLAUDE_MEMORY_INDEX=""
 
 # ── /m-infra-clean ───────────────────────────
-# Webhook (POST JSON: project, status, commit, actor, message) que recibe el aviso de cada corrida del
-# cron de relevamiento, ej. un flujo de n8n que lo reenvía por WhatsApp. Vacío = sin aviso.
+# Aviso de cada corrida del cron de relevamiento (ver skills/m-infra-clean/notify.py). Vacío = sin aviso.
+#   webhook       → POST JSON (project, status, commit, actor, message) a INFRA_NOTIFY_WEBHOOK
+#   evolution-bot → el texto llega por WhatsApp vía un bot n8n/Evolution API (endpoint + token del bot)
+#   mcp-whatsapp  → agenda el WhatsApp con una herramienta MCP del backend (URL + API key + id del bot)
+INFRA_NOTIFY_MODE=""
+INFRA_NOTIFY_MCP_URL=""          # ej. https://tu-dominio.com/api/index.php/mcp/stream
+INFRA_NOTIFY_MCP_KEY=""          # API key MCP — cargarla a mano, nunca por el chat
+INFRA_NOTIFY_BOT_ID=""
 INFRA_NOTIFY_WEBHOOK=""
+INFRA_NOTIFY_BOT_ENDPOINT=""
+INFRA_NOTIFY_BOT_TOKEN=""
+INFRA_NOTIFY_BOT_INSTANCE=""
+INFRA_NOTIFY_BOT_SERVER_URL=""
+INFRA_NOTIFY_PHONE=""            # destinatario, formato internacional sin + (ej. 5493410000000)
 
 # ── Notas ────────────────────────────────────
 # Correr /m-dev-setup después de clonar (desde Claude Code o Codex, dentro de este repo) para
