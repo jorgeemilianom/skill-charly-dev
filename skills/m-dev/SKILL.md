@@ -356,7 +356,8 @@ Make focused, minimal changes — only what the ticket asks for.
 
 - No refactoring, no extra comments, no docstrings unless explicitly requested.
 - Follow existing patterns in the codebase.
-- **Delegation is the default for mechanical work** (`/m-delegate`). Start of this phase: launch every
+- **Delegation is the default for mechanical work** (`/m-delegate`) — **decide it yourself, never ask the
+  user whether to delegate**; just say in one line what went to Codex. Start of this phase: launch every
   item of the assessment's `delegation_plan` with `run_in_background` (one worktree each, `--base` = the
   ticket branch, `--ticket <ID>`) and work on the design part meanwhile. Without an assessment, apply the
   same rule when you're about to: write tests for code with a clear contract, repeat an edit across ≥5

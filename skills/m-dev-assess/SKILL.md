@@ -320,7 +320,7 @@ stay out (they go into the Jira comment in Section H if the user wants docs).
 **Memoria aplicada:** <id — qué cambia, una línea cada una; solo errores previos o reglas que alteran el enfoque>
 **Riesgos:** ⚠️ <uno por línea>
 **Preguntas abiertas:** <una por línea>
-**Delegar a Codex:** <subtareas mecánicas y verificables, una por línea con su validación — o "nada" si no hay>
+**Delego a Codex:** <subtareas mecánicas y verificables, una por línea con su validación — omitir la línea si no hay>
 ```
 
 **Delegation plan — always decide it here, not mid-implementation.** Split the approach into design
@@ -328,7 +328,9 @@ work (stays with the main agent: architecture, ambiguous logic, anything needing
 mechanical work that fits `/m-delegate`'s criteria: tests for existing or about-to-exist code with a
 clear contract, edits repeated across ≥5 files, boilerplate after a named existing pattern, a read-only
 sweep of a big repo. Each delegated item needs a concrete validation command; without one it stays
-here. "nada" is a valid answer for small or design-heavy tickets — don't force it.
+here. Empty is a valid answer for small or design-heavy tickets — don't force it. **This is the agent's
+call, not the user's: never ask whether to delegate.** The line is informative; the user only steps in
+if they object.
 
 Internally still weigh everything from Sections E/F/A/B (errors, high-confidence rules, epic overlap):
 it shapes the approach; it just isn't narrated.
@@ -369,7 +371,7 @@ If score < 0.7: explore at least one alternative, extend Preguntas abiertas. Do 
 Right under the assessment, **one** short block the user answers once. Include only lines that apply:
 
 ```
-¿Arranco con este enfoque (y el plan de delegación)? Además: [docs en Jira (s/n)] [completar descripción: <qué falta>] [pasar a In Progress]
+¿Arranco con este enfoque? Además: [docs en Jira (s/n)] [completar descripción: <qué falta>] [pasar a In Progress]
 ```
 
 With confidence ≥ 0.9 and no questions, the assessment collapses to `**Enfoque**` + `**Repos**` and the
