@@ -104,6 +104,7 @@ Familia separada — solo capa de negocio, sin lógica de código/Jira/PR (ver [
 | [`/m-manager`](skills/m-manager/SKILL.md) | Orquestador. Lista los clientes conocidos, o rutea a los skills de abajo. |
 | [`/m-manager-create`](skills/m-manager-create/SKILL.md) | Bootstrap interactivo de `Business/<cliente>/` para un cliente nuevo. |
 | [`/m-manager-update`](skills/m-manager-update/SKILL.md) | Refresca/mantiene el `Business/<cliente>/` de un cliente existente. |
+| [`/m-delegate`](skills/m-delegate/SKILL.md) | Delegación entre IAs: Claude le pasa a Codex (o Codex a Claude) tareas acotadas y verificables — tests, cambios mecánicos, boilerplate, investigación read-only — en un worktree propio, con contrato fijo y reporte compacto; el delegante revisa el diff e integra. Ahorra tokens, reparte el consumo entre proveedores y permite paralelizar. |
 | [`/m-infra-clean`](skills/m-infra-clean/SKILL.md) | Mantenimiento de la infra registrada en `Business/`: auditoría de solo lectura (logs, accesos, anomalías, vulnerabilidades, backups de DB), reporte fechado, fixes solo con OK explícito y solo en infra que mantenés, tickets para lo alto, y cron semanal de relevamiento que levanta `/m-manager-digest`. |
 
 ---

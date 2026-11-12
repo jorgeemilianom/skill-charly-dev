@@ -15,3 +15,6 @@ projects/*
 !projects/README.md
 Business/*
 !Business/README.md
+
+# Worktrees locales (tickets y delegaciones de scripts/delegate.py)
+worktrees/
