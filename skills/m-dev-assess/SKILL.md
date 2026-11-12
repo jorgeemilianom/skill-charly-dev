@@ -463,10 +463,16 @@ or production (e.g. "the fix passes CI and review without changes to the approac
 probability; `recalled` lists only the episode ids that actually influenced this decision:
 
 ```bash
-echo '{"context":"<TICKET_ID>: <one-line problem>","ticket":"<TICKET_ID>","tags":["<repo>","<client>"],
+echo '{"context":"<TICKET_ID>: <one-line problem>","ticket":"<TICKET_ID>","tags":["<repo>","<client>","check:pr-clean"],
   "action":"<confirmed approach, one line>","prediction":"<binary, checkable>","probability":0.7,
   "recalled":["<ep ids that changed the decision>"]}' | python3 $WS/scripts/memory_store.py cognitive experience
 ```
+
+Add a `check:*` tag when the prediction is one `scripts/evidence.py` can verify on its own (nightly cron):
+`check:pr-clean` (merged, no changes requested, CI green, ≤1 rework commit, no revert in 7 days — the
+default for delivery predictions), `check:ci-green`, or `check:no-revert` (no-PR flows, e.g. direct to
+main). Without one, the prediction waits for a manual evaluation. Calibration per repo/tag is computed
+from these outcomes and shown in the session digest when it's off.
 
 Store the returned id in the assessment's `episode_ids`. No retroactive predictions: only register what
 is being predicted *now*, before the outcome is known.

@@ -81,6 +81,32 @@ def warnings():
     return out
 
 
+def learning():
+    """Señales del ciclo de aprendizaje: calibración, correcciones sin revisar, reglas que no evitan errores."""
+    out = []
+    try:
+        import evidence
+        cal = evidence.report_lines()
+        if cal:
+            out.append("Calibración de tus predicciones (memory/evidence/calibration.json):")
+            out += cal
+    except Exception:
+        pass
+    try:
+        import correction_miner
+        n = correction_miner.pending_count()
+        if n >= 3:
+            out.append(f"{n} correcciones del usuario sin revisar (memory/corrections/inbox.jsonl) — se procesan en "
+                       "`/m-memory consolidate`; ofrecerlo solo en sesiones de mantenimiento del harness.")
+        stats = load("evidence/rule_stats.json") or {}
+        bad = [rid for rid, s in stats.items() if len(set(s.get("violations", []))) >= 2]
+        if bad:
+            out.append(f"Reglas que estaban en contexto y aun así hubo corrección (reescribir o volver hook): {', '.join(bad[:5])}")
+    except Exception:
+        pass
+    return out
+
+
 def cwd_digest(inp):
     cwd = inp.get("cwd") or os.getcwd()
     if "/projects/" not in cwd and "/worktrees/" not in cwd:
@@ -125,7 +151,8 @@ def main():
     strong = [r for r in active_universal if r.get("confidence", 0) >= 0.8]
     if strong:
         out.append("Reglas universales activas (confidence ≥ 0.8, de memory/global_rules.json):")
-        out += [f"- {clip(r.get('rule', ''))}" for r in strong]
+        # Con id: correction_miner.py cuenta en qué sesiones se inyectó cada regla y si igual hubo corrección.
+        out += [f"- [{r.get('id')} · {r.get('confidence', 0):.2f}] {clip(r.get('rule', ''))}" for r in strong]
     rest = len(active_universal) - len(strong)
     out.append(
         "Memoria por repo/cliente: se inyecta sola la primera vez que la sesión toca projects/<repo> o "
@@ -135,6 +162,7 @@ def main():
         + " Escrituras a memory/ solo vía `python3 scripts/memory_store.py` (nunca jq > archivo)."
     )
     out += warnings()
+    out += learning()
 
     print("[harness skill-charly-dev] Digest de memory/ (generado por scripts/session_context.py):")
     print("\n".join(out))

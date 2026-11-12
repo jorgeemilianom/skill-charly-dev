@@ -124,7 +124,7 @@ Default workflow when the client's own `Agent.md` doesn't already specify one:
 register the bet; after the verification step, evaluate it with the verification as evidence:
 
 ```bash
-echo '{"context":"<cliente>: <task, one line>","ticket":"<TICKET_ID or EXEC-<cliente>-<date>>","tags":["<cliente>"],
+echo '{"context":"<cliente>: <task, one line>","ticket":"<TICKET_ID or EXEC-<cliente>-<date>>","tags":["<cliente>","check:no-revert"],
   "action":"<what will be changed, one line>","prediction":"<binary, checkable by the verification>","probability":0.8}' \
   | python3 "$WS/scripts/memory_store.py" cognitive experience
 echo '{"id":"<ep id>","observation":"<facts>","outcome":true,"evidence":["<curl/log/health check>"]}' \
