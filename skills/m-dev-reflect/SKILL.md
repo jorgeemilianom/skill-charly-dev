@@ -433,6 +433,8 @@ Review: <rounds_summary — e.g. '2 rondas de review' o 'sin rondas de review'>
 
 PR: <PR URL if exists, or 'no aplica'>
 
+Delegado: <'N tareas a Codex, X aceptadas sin retrabajo' from memory/delegations/*/meta.json with this ticket — omit the line if none>
+
 Aprendizajes: <1-2 lines on what was learned or what to do differently>"
 ```
 

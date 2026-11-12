@@ -356,10 +356,13 @@ Make focused, minimal changes — only what the ticket asks for.
 
 - No refactoring, no extra comments, no docstrings unless explicitly requested.
 - Follow existing patterns in the codebase.
-- **Delegate what fits** (`/m-delegate`): once the approach is set, hand bounded, verifiable subtasks —
-  tests for existing code, mechanical multi-file edits, boilerplate after an existing pattern, a read-only
-  search over a big repo — to Codex in its own worktree (`--base` = the ticket branch), in parallel when
-  independent, and keep the design, review and integration here.
+- **Delegation is the default for mechanical work** (`/m-delegate`). Start of this phase: launch every
+  item of the assessment's `delegation_plan` with `run_in_background` (one worktree each, `--base` = the
+  ticket branch, `--ticket <ID>`) and work on the design part meanwhile. Without an assessment, apply the
+  same rule when you're about to: write tests for code with a clear contract, repeat an edit across ≥5
+  files, or scaffold after an existing pattern — delegate unless there's no validation command or the
+  repo forbids worktrees (prod checkouts like emprecenter/abbrivoventas/MiPlataFacil). When each one
+  returns: review, integrate, `delegate.py review <id> --verdict …`, cleanup. Report in one line per item.
 
 **Architecture rules**: each affected repo's own `CLAUDE.md` (`projects/<repo>/CLAUDE.md`) is the
 source of truth for its architecture, conventions, and gates — not a copy here. If Phase 0.5

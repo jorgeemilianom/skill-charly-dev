@@ -74,6 +74,20 @@ Flag and fix each of the following before continuing:
 Report each issue with file and line, fix it, then continue:
 > "Encontré [issue] en [file:line]. Lo corrijo antes de crear el PR."
 
+### Second opinion from Codex (read-only, before the PR)
+
+When the diff touches more than ~3 files or any logic beyond config/docs, ask Codex for a cheap bug hunt
+in parallel with writing the PR body — it costs Codex quota, not this session's context:
+
+```bash
+SCRATCH=<scratchpad dir of this session>; git diff $BASE_BRANCH...HEAD > "$SCRATCH/pr.diff"
+printf 'Revisá este diff buscando SOLO bugs concretos (lógica, bordes, nulls, SQL sin scope, condiciones de carrera, tests que pasan en vacío). Nada de estilo. Cada hallazgo: archivo:línea, qué falla y un caso que lo dispara; si no hay, decilo.\nDiff: %s\n' "$SCRATCH/pr.diff" \
+  | python3 "$WS/scripts/delegate.py" run --dir "$(git rev-parse --show-toplevel)" --mode read --brief - --effort medium --ticket <TICKET_ID> --title "review PR <TICKET_ID>"
+```
+
+Verify each finding yourself before acting on it (it's a hint, not a verdict); fix the real ones, then
+`delegate.py review <id> --verdict accepted|rejected --note "<n reales de n>"`. Skip for trivial diffs.
+
 ### Build PR body
 
 **1 — List new test files added in this branch:**
