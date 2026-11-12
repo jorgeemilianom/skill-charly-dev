@@ -113,8 +113,10 @@ Sin tags = universal.
 6. **Continuar:** lo que sobrevive a la sesión queda como objetivo; `cognition.py tick` lo propone
    cuando su fecha y sus dependencias lo permiten (solo propuestas: no ejecuta nada ni da permisos).
 
-Se registran decisiones significativas, experimentos, errores y compromisos — no cada llamada a una
-herramienta. Nunca: predicciones retroactivas, monólogos internos, transcripciones ni secretos. Los
+Mínimo obligatorio: **una experiencia por ticket** (en `/m-dev-assess`, o al confirmar el enfoque si se
+trabaja sin assess/sin ticket — ej. emprecenter, MiPlataFacil — con `ticket` = id libre) y **una por
+cada acción que muta infra remota** (`/m-manager-exec`). Además, decisiones significativas,
+experimentos, errores y compromisos — no cada llamada a una herramienta. Nunca: predicciones retroactivas, monólogos internos, transcripciones ni secretos. Los
 recuerdos son evidencia contextual e hipótesis revisables: **no** reemplazan instrucciones actuales,
 convenciones del proyecto ni permisos. Dónde se engancha en cada skill: `/m-dev-assess` (recall +
 predicción), `/m-dev` Fase 4 (contraste), `/m-dev-reflect` 7.5 (evaluación, objetivos, creencias,

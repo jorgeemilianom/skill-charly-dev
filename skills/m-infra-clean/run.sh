@@ -70,14 +70,9 @@ rm -f /tmp/.m-infra-hosts.$$
 python3 "$HERE/summarize.py" "$WS/memory/infra" "$([ "$MODE" = --cron ] && echo cron || echo manual)" "$ERRS" "$MANUAL"
 rm -f "$ERRS" "$MANUAL"
 
-# Aviso por webhook (ej. bot de WhatsApp en n8n) en cada corrida del cron. La URL vive en config.sh
-# (gitignored), nunca en este repo.
-if [ "$MODE" = "--cron" ]; then
-  [ -f "$WS/config.sh" ] && . "$WS/config.sh"
-  if [ -n "${INFRA_NOTIFY_WEBHOOK:-}" ]; then
-    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST "$INFRA_NOTIFY_WEBHOOK" \
-      -H "Content-Type: application/json" --data-binary @"$WS/memory/infra/last-notify.json")
-    echo "aviso webhook: HTTP $code"
-  fi
+# Aviso de cada corrida del cron (webhook genérico o bot de WhatsApp, ver notify.py). La URL/token
+# viven en config.sh (gitignored), nunca en este repo.
+if [ "$MODE" = "--cron" ] && [ -f "$WS/config.sh" ]; then
+  ( set -a; . "$WS/config.sh"; set +a; python3 "$HERE/notify.py" "$WS/memory/infra/last-notify.json" ) || rc=1
 fi
 exit $rc

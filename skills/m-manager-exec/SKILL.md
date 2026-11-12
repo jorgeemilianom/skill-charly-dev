@@ -120,6 +120,20 @@ Default workflow when the client's own `Agent.md` doesn't already specify one:
    command — in `Business/<cliente>/` (append to `context.md`, or the client's own log location if
    `Agent.md` specifies one). Never overwrite prior log entries.
 
+**Cognitive loop (mandatory for any mutating action).** Before the first state-changing step,
+register the bet; after the verification step, evaluate it with the verification as evidence:
+
+```bash
+echo '{"context":"<cliente>: <task, one line>","ticket":"<TICKET_ID or EXEC-<cliente>-<date>>","tags":["<cliente>"],
+  "action":"<what will be changed, one line>","prediction":"<binary, checkable by the verification>","probability":0.8}' \
+  | python3 "$WS/scripts/memory_store.py" cognitive experience
+echo '{"id":"<ep id>","observation":"<facts>","outcome":true,"evidence":["<curl/log/health check>"]}' \
+  | python3 "$WS/scripts/memory_store.py" cognitive evaluate
+```
+
+If the outcome can't be known yet (depends on traffic, a cron, the client), leave it pending and open a
+goal with the check as `next_action` (`cognitive goal`).
+
 ## Step 5 — Report
 
 Summarize what changed, where, and how to roll it back if needed. Remind the user to unset any

@@ -28,6 +28,7 @@ Throughout this workflow, act as a **senior engineer** familiar with the project
 - **Surface existing patterns**: Search the codebase for reusable utilities before writing new code.
 - **Acknowledge uncertainty**: When entering an unfamiliar area, explore deeply before proposing solutions. If still uncertain, say so explicitly.
 - **Defer to the user**: If the user insists after hearing the concerns, proceed with their approach.
+- **Be terse in output**: result or conclusion first in 1-3 lines, then only what changes the decision, the risk or the next step. No preambles, no restating tool output or what the user already knows, no unrequested alternatives, no closing recap. Templates in sibling skills are maximums — omit empty fields.
 
 ---
 

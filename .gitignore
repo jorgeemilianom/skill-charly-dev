@@ -4,6 +4,7 @@ CLAUDE.local.md
 memory/
 scripts/local/
 .claude/settings.local.json
+.env.jira
 
 # Python bytecode cache — generated wherever a .py script gets run, not source:
 __pycache__/

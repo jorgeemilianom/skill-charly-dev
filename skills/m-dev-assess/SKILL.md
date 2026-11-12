@@ -299,45 +299,36 @@ Surface cross-project impact if found.
 
 ## Section C — Technical Assessment
 
-```
-## Technical Review — <TICKET_ID>
+Compact by design: the user reads it to decide, not to audit the exploration. One line per item, omit
+any field that has nothing — never write "none"/"no aplica". Findings that don't change the approach
+stay out (they go into the Jira comment in Section H if the user wants docs).
 
-**Problem being solved**: ...
-**Approach requested by ticket**: ...
-**Repos affected**: [list of detected repos]
-**Codebase findings**: (existing code, patterns, utilities discovered — per repo)
-**Architecture impact**:
-  - [repo-1]: [layers / areas affected]
-  - [repo-2]: [layers / areas affected]
-  - [repo-N]: [layers / areas affected — one line per affected repo]
-**Memory context** (reglas con `confidence < 0.4` ya fueron excluidas en la lectura filtrada):
-  - 🔴 Errores previos aplicables: mistakes.json + patrones `type: error` + decisiones `failure`/`score < 0.4` (omitir solo si ninguna fuente tiene algo aplicable)
-  - ⭐ Reglas de alta confianza (≥0.8) — aplicar por defecto: (omitir si no hay)
-  - 🟢 Patrones / reglas a considerar (0.5–0.79): (omitir si no hay)
-  - 📋 Decisiones previas con score (las de score ≥ 0.4 solamente — las de abajo del umbral ya están en 🔴): (omitir si no hay)
-**Epic context** (omitir si no hay overlap):
-  - 🔵 En curso / ✅ Recientes / 🔜 Próximos
-**Assessment**:
-  - ✅ What's sound
-  - ⚠️ Concerns or risks (if any)
-  - 💡 Better alternatives (if applicable)
-**Recommended approach**: ...
-**Open questions**: ...
-**Confidence Score**: [0.0 – 1.0]
 ```
+## Assessment — <TICKET_ID> · confianza 0.XX
+
+**Problema:** <una línea>
+**Enfoque:** <1-2 líneas: qué se cambia y dónde — archivos/capas clave; si hay una alternativa mejor que lo que pide el ticket, va acá con el porqué en media línea>
+**Repos:** <repo: capas> · <repo: capas>
+**Memoria aplicada:** <id — qué cambia, una línea cada una; solo errores previos o reglas que alteran el enfoque>
+**Riesgos:** ⚠️ <uno por línea>
+**Preguntas abiertas:** <una por línea>
+```
+
+Internally still weigh everything from Sections E/F/A/B (errors, high-confidence rules, epic overlap):
+it shapes the approach; it just isn't narrated.
 
 ### Confidence Score — derived, not a free estimate
 
 Do not pick this number by feel. Across this project's actual history, self-estimated confidence
 clustered at 0.85–0.97 regardless of how many open questions or concerns an assessment had — a ticket
 with 6 open questions scored *higher* than several with zero. An unanchored self-report doesn't
-discriminate risk. Compute it instead, from what Sections C's own **Assessment** and **Open questions**
+discriminate risk. Compute it instead, from what Section C's own **Riesgos** and **Preguntas abiertas**
 already contain by the time you reach this point:
 
 ```
 score = 0.95
-      - 0.08 × (number of items in "Open questions")
-      - 0.05 × (number of ⚠️ items in "Assessment")
+      - 0.08 × (number of items in "Preguntas abiertas")
+      - 0.05 × (number of ⚠️ items in "Riesgos")    
 score = max(score, 0.3)          # floor — don't report near-zero
 score = round(score to nearest 0.05)
 ```
@@ -353,143 +344,28 @@ escalation path below expects it to.
 | 0.7 – 0.89 | Reasonable certainty — minor unknowns that don't block progress |
 | < 0.7 | Low certainty — **dig deeper before continuing** |
 
-If score < 0.7: explore at least one alternative, extend Open questions. Do not proceed until user resolves unknowns.
+If score < 0.7: explore at least one alternative, extend Preguntas abiertas. Do not proceed until user resolves unknowns.
 
 ---
 
 ## Section D — Single Confirmation Prompt
 
-Present **one combined prompt**. The user replies once. Build dynamically — include only what applies.
+Right under the assessment, **one** short block the user answers once. Include only lines that apply:
 
 ```
-## Confirmación para arrancar — <TICKET_ID>
-
-[Technical Assessment shown above]
-
----
-Antes de continuar, confirmá:
-
-**Approach**: ¿el enfoque propuesto es correcto? (o indicá ajustes)
-
-**Documentación en Jira**: ¿Genero el análisis técnico como comentario en el ticket?
-(incluye: enfoque, archivos clave, capas afectadas, riesgos, plan de testing)
-[omitir si el usuario ya dijo que no quiere docs]
-
-**Ticket en Jira** (solo si descripción incompleta):
-- Falta: [qué falta]. ¿Lo completo con: [propuesta]?
-[omitir si el ticket está completo]
-
-**Transición a In Progress** (solo fresh start):
-- ¿Transiciono el ticket a 'In Progress'?
-[omitir si el branch ya existía]
+¿Arranco con este enfoque? Además: [docs en Jira (s/n)] [completar descripción: <qué falta>] [pasar a In Progress]
 ```
+
+With confidence ≥ 0.9 and no questions, the assessment collapses to `**Enfoque**` + `**Repos**` and the
+same one-line prompt.
 
 Wait for the user's single reply. Apply all confirmed actions in Section H before proceeding.
-
-### Fast path (confidence ≥ 0.9)
-
-```
-## ✅ Assessment — <TICKET_ID> [Confidence: 0.9X]
-
-**Approach**: [one sentence]
-**No risks or open questions detected.**
-**Repos**: [affected repos]
-
-¿Genero el análisis técnico en Jira? (s/n)
-[Transition to In Progress si aplica — una línea]
-
-Respondé para arrancar o indicá cambios.
-```
 
 ---
 
 ## Section H — Jira Documentation (after confirmation, no extra auth needed)
 
-Run only if the user confirmed documentation in Section D.
-
-### H.1 — Generate technical comment
-
-Build the comment in **Jira wiki markup** (no Markdown: use `*bold*`, `_italic_`, `{code}`, `h2.`, `h3.`, `-` for lists):
-
-```
-h2. Análisis técnico — <TICKET_ID>
-
-h3. Enfoque confirmado
-<one paragraph: what will be implemented and how>
-
-h3. Repos y capas afectadas
-<one line per repo/layer: backend-api: handler → service → repository / frontend-app: feature X → apiClient / internal-platform: módulo Y → DB>
-
-h3. Archivos clave
-- <relative path from workspace root>
-- <relative path from workspace root>
-
-h3. Riesgos / concerns
-<list only ⚠️ items, or "Ninguno" if assessment was clean>
-
-h3. Plan de testing
-- <test that must pass — reference Make targets when applicable>
-- <edge case to cover>
-
-h3. Preguntas resueltas
-<each open question with its confirmed answer, or "Ninguna" if there were none>
-
-_Generado por /m-dev-assess — <ISO date>_
-```
-
-Post it:
-```bash
-WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
-[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-source "$WS/scripts/workspace-env.sh"
-uv run $JIRA_SKILL/workflow/jira-comment.py add "<TICKET_ID>" "<comment text>"
-```
-
-### H.2 — Enrich ticket description (only if description is thin — under 150 chars or missing acceptance criteria)
-
-Check ticket description length from Step 0 JSON output. If thin, add labels to flag it and update with a structured description:
-
-```bash
-WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
-[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-source "$WS/scripts/workspace-env.sh"
-
-# Add label to signal the ticket has been technically assessed
-uv run $JIRA_SKILL/core/jira-issue.py update "<TICKET_ID>" --labels "assessed"
-
-# If description is thin, update with structured content via fields-json
-# Description must be plain text (Jira Cloud uses ADF internally)
-uv run $JIRA_SKILL/core/jira-issue.py update "<TICKET_ID>" \
-  --fields-json '{"description": "<enriched description — plain text, no markup>"}'
-```
-
-Enriched description format (plain text only):
-```
-Objetivo: <one sentence — what this ticket achieves>
-
-Contexto: <why this is needed — business or technical reason>
-
-Criterios de aceptación:
-<criterion 1>
-<criterion 2>
-<criterion 3>
-
-Notas técnicas: ver comentario de análisis técnico.
-```
-
-### H.3 — Transition to In Progress (if fresh start and user confirmed)
-
-```bash
-WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
-[ -f "$WS/CLAUDE.md" ] || WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-source "$WS/scripts/workspace-env.sh"
-uv run $JIRA_SKILL/workflow/jira-transition.py do "<TICKET_ID>" "In Progress"
-```
-
-If transition fails (workflow constraint), continue silently — never block on this.
+Only if the user confirmed any Jira action in Section D: read and follow `references/jira-documentation.md` (relative to this skill) — technical comment, thin-description enrichment, In Progress transition.
 
 ---
 
@@ -570,9 +446,11 @@ with locked():
 
 Overwrite if a saved assessment already exists — confirmed version is always the most current.
 
-**Register the decision as an experience** (once the approach is confirmed, before writing code) when
-it is significant — a non-obvious approach, a risk accepted, an experiment, a choice an earlier memory
-changed. Not for routine steps. The prediction must be binary and checkable later by validation, review
+**Register the decision as an experience — always, one per ticket** (once the approach is confirmed,
+before writing code). Every ticket has at least one checkable bet; if the approach is routine, predict
+the delivery itself (e.g. "passes CI and review with no change to the approach", "no rework after the
+user tests it"). Add more only for a risk accepted, an experiment, or a choice an earlier memory
+changed. This is what feeds recall and beliefs later — with no episodes the loop learns nothing. The prediction must be binary and checkable later by validation, review
 or production (e.g. "the fix passes CI and review without changes to the approach"), with an honest
 probability; `recalled` lists only the episode ids that actually influenced this decision:
 
