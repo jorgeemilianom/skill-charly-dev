@@ -21,6 +21,9 @@ while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.examp
 
 ## Cuándo delegar
 
+La decisión es del agente: **nunca preguntarle al usuario si delegar** — decidir con este criterio y
+informar en una línea qué se delegó. Solo se pregunta si el usuario pidió explícitamente no delegar.
+
 Delegar conviene cuando **el brief es mucho más corto que el trabajo** y el resultado **se verifica
 barato** (un comando de validación o un diff chico de leer).
 
