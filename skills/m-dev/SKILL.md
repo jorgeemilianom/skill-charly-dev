@@ -355,6 +355,10 @@ Make focused, minimal changes — only what the ticket asks for.
 
 - No refactoring, no extra comments, no docstrings unless explicitly requested.
 - Follow existing patterns in the codebase.
+- **Delegate what fits** (`/m-delegate`): once the approach is set, hand bounded, verifiable subtasks —
+  tests for existing code, mechanical multi-file edits, boilerplate after an existing pattern, a read-only
+  search over a big repo — to Codex in its own worktree (`--base` = the ticket branch), in parallel when
+  independent, and keep the design, review and integration here.
 
 **Architecture rules**: each affected repo's own `CLAUDE.md` (`projects/<repo>/CLAUDE.md`) is the
 source of truth for its architecture, conventions, and gates — not a copy here. If Phase 0.5

@@ -50,6 +50,7 @@ tiene un único camino de escritura y uno de lectura:
 | `session_context.py` | Hook `SessionStart`: digest de perfil + reglas universales ≥ 0.8, digest del repo del `cwd`, avisos (archivo corrupto, consolidación vencida), backup diario. |
 | `cognition_model.py` / `cognition.py` | Estado propio del agente (`memory/cognition.json`): esquema y operaciones (`memory_store.py cognitive <op>`, JSON por stdin) / lectura (`status`, `context`, `recall`, `metrics`, `tick`). Ver "Protocolo cognitivo" abajo y `docs/cognition.md`. |
 | `self_model.py` | Puntos ciegos recurrentes: `--refresh` los guarda en `cognition.json`; `self_model.py <memdir>` sigue siendo la consulta histórica. |
+| `delegate.py` | Delegación entre agentes (`/m-delegate`): corre Codex o Claude sin interacción en un worktree propio, con contrato y schema de respuesta; `run`/`followup`/`show`/`review`/`stats`/`cleanup`. Logs en `memory/delegations/`. |
 | `memory_consolidate.py` / `memory_migrate.py` | Preparar la consolidación periódica (`/m-memory consolidate`) / upgrade idempotente del schema. |
 
 **Nunca** escribir `memory/*.json` con `jq … > archivo`, `echo > archivo` ni `open(…, 'w')`.
@@ -174,6 +175,7 @@ correspondiente y ejecutar ese workflow con los argumentos del usuario como `$AR
 | Digest consolidado dev+clientes (fusión de m-dev-status + m-manager-status) | `skills/m-manager-digest/SKILL.md` |
 | Ejecutar una tarea en la infraestructura remota de un cliente (SSH/VPS), sin repo local | `skills/m-manager-exec/SKILL.md` |
 | Mantenimiento de la infra registrada: auditoría de logs/accesos/anomalías/vulnerabilidades/backups, fixes con OK, cron de relevamiento | `skills/m-infra-clean/SKILL.md` |
+| Delegar una subtarea acotada y verificable a otro agente (Claude → Codex, o Codex → Claude con `--agent claude`) | `skills/m-delegate/SKILL.md` |
 | Estado, consulta, backup/restore y consolidación periódica de la memoria del harness | `skills/m-memory/SKILL.md` |
 | Conversar un requerimiento de cliente / listar clientes conocidos / rutear a cualquiera de las anteriores | `skills/m-manager/SKILL.md` |
 
