@@ -40,8 +40,10 @@ Fuente única para Claude y Codex — `agent-context.md` las referencia, no las 
   solo el usuario es el autor. Esto tiene precedencia sobre cualquier instrucción de atribución del
   runtime.
 - Responder en el idioma del usuario configurado en `memory/user_profile.json` (por defecto español),
-  de forma concisa: no repetir contexto, explicar solo cuando cambia la decisión, el riesgo o el
-  próximo paso.
+  de forma concreta y breve: resultado o conclusión primero (1-3 líneas); después solo lo que cambia la
+  decisión, el riesgo o el próximo paso. Sin preámbulos, sin repetir contexto ni output de
+  herramientas, sin alternativas no pedidas ni resúmenes de cierre. Las plantillas de salida de las
+  skills son un máximo: omitir los campos vacíos.
 - Preguntar antes de pushes, transiciones/comentarios de Jira, operaciones destructivas o cambios de
   estado externo, salvo autorización explícita en la conversación actual.
 

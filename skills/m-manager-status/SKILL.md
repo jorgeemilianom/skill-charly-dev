@@ -72,20 +72,12 @@ this workspace.
 ### Step 3 — Present the digest
 
 ```
-## Estado — <cliente>
-
-### Contexto de negocio
-<resumen de las notas mas recientes de context.md, no el archivo completo>
-
-### Desarrollo en curso
-<tickets abiertos / branches activos / PRs pendientes, o "sin actividad de desarrollo registrada">
-
-### Propuestas
-- <1-3 sugerencias concretas: riesgo, oportunidad, seguimiento pendiente>
-
----
-¿Sobre qué querés profundizar, o hay algo de esto que no cuadra con lo que sabés vos?
+**<cliente>** — <estado en 1 línea: última nota relevante + fecha>
+Dev: <tickets abiertos / PRs pendientes en 1 línea, u omitir si no hay tracking>
+Propuestas: <1-3, una línea cada una; solo riesgos u oportunidades concretas>
 ```
+
+No closing question beyond one line if there's a real decision pending.
 
 ---
 

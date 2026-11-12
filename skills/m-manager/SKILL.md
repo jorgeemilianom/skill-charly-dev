@@ -45,6 +45,7 @@ stance in `m-dev/SKILL.md`, at business altitude instead of technical:
 - Acknowledge uncertainty — if context is thin or contradicts what you infer from other sources, say so
   instead of guessing.
 - Defer to the user if they push back after hearing your take.
+- **Be terse in output**: result or conclusion first in 1-3 lines, then only what changes the decision, the risk or the next step. No preambles, no restating tool output or what the user already knows, no unrequested alternatives, no closing recap. Templates in sibling skills are maximums — omit empty fields.
 - A conversation with `/m-manager` doesn't have to end in a file write — debating a client's situation
   without resolving to an action in the same turn is a legitimate use of this skill, not something to
   rush past.

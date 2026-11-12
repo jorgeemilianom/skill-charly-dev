@@ -82,37 +82,19 @@ Compare what was implemented against what the ticket asks for. Determine:
 
 ## Step 4 — Present the resume summary
 
+Short: the user wants to know where it stands and what's next, not a changelog. Omit empty lines.
+
 ```
-## Resumen de retomada — <TICKET_ID>
+**<TICKET_ID>** — <hecho: 1 línea> · <pendiente: 1 línea> · PR: <no creado / abierto / cambios pedidos / aprobado>
+<repo: branch, N commits> · <repo: ...>
+Review pendiente: <solo si hay comentarios sin resolver, uno por línea>
+**Próximo paso:** <una oración>
 
-### Qué se implementó
-- <bullet por cada cosa concreta ya hecha, basado en commits y código>
-
-### En progreso (incompleto)
-- <código que existe pero está a medio hacer, si hay>
-
-### Pendiente
-- <lo que el ticket pide y aún no está implementado>
-
-### Repos activos
-- <backend-api: branch + N commits | frontend-app: idem | internal-platform: idem>
-
-### Estado del PR
-- <no creado / abierto / cambios solicitados / aprobado>
-- <si hay review comments pendientes: listarlos>
-
-### Próximo paso concreto
-<una sola oración describiendo exactamente qué hacer primero al retomar>
-
----
-### Para la daily
-> "Estoy trabajando en [TICKET_ID]: [descripción breve].
-> [Lo que se hizo: 1-2 oraciones].
-> Hoy voy a [próximo paso]."
+Daily: "Estoy en <TICKET_ID> (<qué>). Ayer <hecho>. Hoy <próximo paso>."
 ```
 
 ## Step 5 — Propose continuation
 
-> "¿Continuamos desde donde quedó? Puedo arrancar con [próximo paso concreto]."
+Close with one line: "¿Sigo con <próximo paso>?"
 
 Proceed to the appropriate `/m-dev` phase after confirmation (e.g. `/m-dev <TICKET_ID>` to re-enter branch setup/development, `/m-dev-pr <TICKET_ID>` if a PR is pending).
