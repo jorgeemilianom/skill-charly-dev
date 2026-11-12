@@ -83,10 +83,11 @@ dejar de delegarlo (regla en memoria vía `memory_store.py add-rule --tags deleg
 
 ## Notas
 
-- El sandbox de Codex (bwrap) no funciona en esta VPS (`kernel.apparmor_restrict_unprivileged_userns=1`):
-  corre en `danger-full-access`, igual que las sesiones interactivas. El aislamiento real es el worktree
-  propio + el contrato + la revisión del diff. Si algún día se habilita el perfil AppArmor de bwrap,
-  `DELEGATE_CODEX_SANDBOX=workspace-write` lo vuelve a activar sin tocar el script.
+- Codex corre con sandbox `workspace-write` (escribe solo dentro del worktree, con red para deps/tests),
+  habilitado por el perfil AppArmor `/etc/apparmor.d/codex-bwrap` (la VPS tiene
+  `kernel.apparmor_restrict_unprivileged_userns=1`). Si un update de Codex cambia la ruta de su `bwrap`
+  y la delegación falla con `bwrap: ... Permission denied`, revisar la ruta del perfil;
+  `DELEGATE_CODEX_SANDBOX=danger-full-access` es el escape temporal.
 - Costo fijo de Codex: ~50-70k tokens de entrada por corrida (la mayoría cacheados) al cargar su
   contexto. Por eso no conviene delegar tareas de un par de líneas.
 - `--mode read` verifica al final que el árbol quedó intacto y avisa si no.

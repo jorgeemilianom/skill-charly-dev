@@ -147,10 +147,11 @@ def exec_agent(meta, prompt, resume=None):
     json.dump(SCHEMA, open(schema_f, "w"))
     if meta["agent"] == "codex":
         last = os.path.join(d, f"last-{n}.json")
-        # El sandbox bwrap de Codex no funciona en esta VPS (kernel.apparmor_restrict_unprivileged_userns=1):
-        # el aislamiento lo dan el worktree propio + el contrato + la revisión del diff por el delegante.
-        sandbox = os.environ.get("DELEGATE_CODEX_SANDBOX", "danger-full-access")
-        common = ["--json", "--output-schema", schema_f, "-o", last, "--skip-git-repo-check"]
+        # Sandbox de Codex: escritura solo dentro del directorio de trabajo, con red (instalar deps / correr tests).
+        # Requiere el perfil AppArmor /etc/apparmor.d/codex-bwrap (kernel.apparmor_restrict_unprivileged_userns=1).
+        sandbox = os.environ.get("DELEGATE_CODEX_SANDBOX", "workspace-write")
+        common = ["--json", "--output-schema", schema_f, "-o", last, "--skip-git-repo-check",
+                  "-c", "sandbox_workspace_write.network_access=true"]
         if meta.get("model"):
             common += ["-m", meta["model"]]
         if meta.get("effort"):
