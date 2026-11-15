@@ -7,7 +7,9 @@ contexto del último turno en el transcript y, la primera vez que cruza cada umb
 usuario y le pide al agente que proponga cortar: checkpoint del ticket + /clear (+ /m-dev-resume), o
 /compact si la tarea sigue y el historial viejo ya no aporta.
 
-Umbrales: CONTEXT_GUARD_STEPS (tokens, default "120000,180000,250000"). Nunca bloquea: ante cualquier
+Umbrales: CONTEXT_GUARD_STEPS (tokens, default "120000,180000,250000") y después uno cada
+CONTEXT_GUARD_REPEAT (default 100000). Red de seguridad de CLAUDE_CODE_AUTO_COMPACT_WINDOW (.claude/settings.json),
+que compacta solo cerca de 250k aunque el modelo tenga ventana de 1M. Nunca bloquea: ante cualquier
 error sale 0 sin output.
 """
 import json
@@ -16,6 +18,7 @@ import sys
 import tempfile
 
 STEPS = [int(x) for x in os.environ.get("CONTEXT_GUARD_STEPS", "120000,180000,250000").split(",")]
+REPEAT = int(os.environ.get("CONTEXT_GUARD_REPEAT", "100000"))
 TAIL_BYTES = 400_000
 
 
@@ -43,7 +46,9 @@ def main():
     if not transcript or not os.path.exists(transcript):
         return
     ctx = last_context(transcript)
-    crossed = [s for s in STEPS if ctx >= s]
+    # Pasado el último umbral, seguir avisando cada REPEAT tokens: sin esto una sesión de 1M quedaba muda tras 250k.
+    steps = STEPS + list(range(STEPS[-1] + REPEAT, max(ctx, STEPS[-1]) + 1, REPEAT))
+    crossed = [s for s in steps if ctx >= s]
     if not crossed:
         return
     d = os.path.join(tempfile.gettempdir(), f"skill-charly-dev-hooks-{os.getuid()}")
