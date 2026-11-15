@@ -19,6 +19,20 @@ WS="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 while [ "$WS" != "/" ] && { [ ! -f "$WS/CLAUDE.md" ] || [ ! -f "$WS/config.example.sh" ]; }; do WS="$(dirname "$WS")"; done
 ```
 
+## Atajo: `ask` (investigación read-only)
+
+Para ubicar o entender código, el primer recurso — antes que leer archivos en cadena o lanzar un
+subagente `Explore` (ambos gastan tokens de Claude):
+
+```bash
+python3 $WS/scripts/delegate.py ask "¿dónde se valida el token de refresh y qué pasa si expiró?" --dir projects/<repo>
+```
+
+Sin worktree ni brief: Codex `--effort low`, modo lectura, ~20-60 s. Devuelve la respuesta (≤3
+oraciones) y hallazgos `ruta:línea — qué`; leer solo esas líneas para verificar lo que importa. Si la
+respuesta no alcanza, `followup <id> --brief -` repregunta en la misma sesión sin recargar contexto.
+Preguntas que dependen de la conversación con el usuario no sirven: el otro agente solo ve el repo.
+
 ## Cuándo delegar
 
 La decisión es del agente: **nunca preguntarle al usuario si delegar** — decidir con este criterio y
@@ -59,13 +73,17 @@ Antes de delegar, `python3 $WS/scripts/delegate.py stats` y `python3 $WS/scripts
    Fuera de alcance: <lo que NO tiene que tocar>
    Validación: <comando exacto que tiene que pasar>
    ```
+   En modo escritura, pasar siempre `--validate "<cmd>"`: el script lo agrega al brief y lo corre él
+   mismo al terminar (`validación (script): OK|FALLA` en el reporte). Las 2 corridas con retrabajo del
+   historial no tenían validación. Si no hay comando, armar uno barato (un `grep -c`, un lint, un script
+   de verificación en el scratchpad) antes de delegar; sin eso, hacerlo a mano.
 2. **Predicción** (protocolo cognitivo): una experiencia por delegación —
    `"action":"delegar a codex: <tarea>","prediction":"se acepta sin retrabajo","probability":<honesta>`,
    tags `["delegation","<agente>","<repo>"]` (el veredicto de `review` es la evidencia: evaluarla a mano en el paso 6). Ver `/m-dev-reflect` 7.5 para el formato.
 3. **Correr**:
    ```bash
    python3 $WS/scripts/delegate.py run --repo projects/<repo> --base <rama del ticket u origin/<base>> \
-     --brief <archivo> [--agent codex] [--effort low] [--ticket <ID>] [--mode read]
+     --brief <archivo> --validate "<cmd>" [--agent codex] [--effort low] [--ticket <ID>] [--mode read]
    ```
    - `--base` = la rama donde se va a integrar, para que el patch aplique limpio.
    - `--dir <worktree del ticket>` en vez de `--repo` si conviene que edite directo ahí (nunca un
@@ -77,7 +95,8 @@ Antes de delegar, `python3 $WS/scripts/delegate.py stats` y `python3 $WS/scripts
      (misma sesión del agente, no recarga contexto: `delegate.py followup <id> --brief -`) o si se
      termina a mano.
    - Leer `diff.patch` (si es grande, al menos los archivos fuera del alcance esperado y los tests).
-   - Correr la validación uno mismo en el worktree — el reporte del otro agente es un dato, no una prueba.
+   - Con `--validate`, la línea `validación (script)` ya es la prueba independiente; sin él, correr la
+     validación uno mismo en el worktree — el reporte del otro agente es un dato, no una prueba.
 5. **Integrar** en la rama del ticket: `git -C <worktree-del-ticket> apply $WS/memory/delegations/<id>/diff.patch`
    (o `git merge --squash delegate/<id>`), revisar `git status`, y seguir el flujo normal de `/m-dev`
    (validación, commit con las reglas de siempre).
