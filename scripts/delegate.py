@@ -10,6 +10,8 @@ delegar.
 Uso:
   delegate.py run --repo projects/X [--base origin/develop] --brief brief.md [--agent codex|claude]
   delegate.py run --dir <worktree existente> --brief - [--mode read]       (brief por stdin)
+  delegate.py run ... --validate "npm test"  # el script corre la validación él mismo al terminar
+  delegate.py ask "¿dónde se calcula X?" [--dir projects/X]   # investigación read-only barata, sin worktree
   delegate.py followup <id> --brief -        # misma sesión del agente: corrige sin recargar contexto
   delegate.py show <id> [--diff]             # reporte (y diff completo) de una corrida
   delegate.py review <id> --verdict accepted|reworked|rejected [--note "..."]
@@ -38,10 +40,12 @@ WORKTREES = os.path.join(WS, "worktrees")
 SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["status", "summary", "files_changed", "validation", "open_questions"],
+    "required": ["status", "summary", "findings", "files_changed", "validation", "open_questions"],
     "properties": {
         "status": {"type": "string", "enum": ["done", "partial", "blocked"]},
         "summary": {"type": "string", "description": "Qué se hizo o se encontró, máximo 3 oraciones"},
+        "findings": {"type": "array", "items": {"type": "string"},
+                     "description": "Hallazgos concretos 'ruta:línea — qué', máximo 12; vacío si no aplica"},
         "files_changed": {"type": "array", "items": {"type": "string"}},
         "validation": {
             "type": "object",
@@ -65,6 +69,7 @@ CONTRACT = """Sos un agente al que otro agente del harness MSoftIA le delega una
   avanzar, status=blocked con el motivo.
 - Respetá las convenciones del repo (su CLAUDE.md / AGENTS.md) y el alcance del brief: nada de refactors extra.
 - Si el brief trae un comando de validación, correlo y reportá el resultado real; nunca lo inventes.
+- En findings, cada hallazgo con su `ruta:línea`: el delegante va a leer solo esas líneas, no el repo entero.
 - Respuesta final: solo el JSON del schema, en español, breve.
 {mode_rule}
 --- BRIEF ---
@@ -232,11 +237,27 @@ def exec_agent(meta, prompt, resume=None):
     return result, error
 
 
+def run_validation(meta):
+    """Corre --validate en el directorio de trabajo: el reporte del agente es un dato, esto es la prueba."""
+    cmd = meta.get("validate")
+    if not cmd:
+        return
+    try:
+        r = subprocess.run(cmd, shell=True, cwd=meta["dir"], capture_output=True, text=True,
+                           timeout=meta.get("validate_timeout", 600))
+        tail = (r.stdout + r.stderr).strip().splitlines()[-10:]
+        meta["checked"] = {"command": cmd, "passed": r.returncode == 0, "tail": "\n".join(tail), "at": now()}
+    except subprocess.TimeoutExpired:
+        meta["checked"] = {"command": cmd, "passed": False, "tail": "timeout", "at": now()}
+
+
 def finish(meta, result, error, before):
     d = run_dir(meta["id"])
     meta["status"] = (result or {}).get("status") or "error"
     meta["error"] = error
     meta["finished_at"] = now()
+    if meta["mode"] == "write":
+        run_validation(meta)
     if meta["mode"] == "read" and before is not None and git_state(meta["dir"]) != before:
         meta["read_violation"] = True
     meta["diffstat"] = diff_report(meta["dir"], os.path.join(d, "diff.patch"), own=bool(meta.get("worktree")))
@@ -259,26 +280,39 @@ def report(meta, result=None):
         print("ALERTA: modo read pero el árbol cambió — revisar el diff antes de cualquier otra cosa")
     if result.get("summary"):
         print(f"resumen: {result['summary']}")
+    for h in result.get("findings") or []:
+        print(f"- {h}")
+    c = meta.get("checked")
+    if c:
+        print(f"validación (script): {c['command']} → {'OK' if c['passed'] else 'FALLA'}")
+        if not c["passed"] and c.get("tail"):
+            print("  " + "\n  ".join(c["tail"].splitlines()[-8:]))
     v = result.get("validation") or {}
-    if v.get("command"):
+    if v.get("command") and not c and meta["mode"] == "write":
         ok = {True: "OK", False: "FALLA", None: "sin correr"}[v.get("passed")]
         print(f"validación: {v['command']} → {ok}")
         if v.get("passed") is False and v.get("output_tail"):
             print("  " + "\n  ".join(v["output_tail"].splitlines()[-8:]))
     for q in result.get("open_questions") or []:
         print(f"pregunta: {q}")
-    print(f"cambios: {meta.get('diffstat', '')}")
-    print(f"diff completo: {os.path.join(run_dir(meta['id']), 'diff.patch')}")
+    if meta["mode"] == "write" or meta.get("read_violation"):
+        print(f"cambios: {meta.get('diffstat', '')}")
+        print(f"diff completo: {os.path.join(run_dir(meta['id']), 'diff.patch')}")
 
 
 def cmd_run(a):
-    brief = sys.stdin.read() if a.brief == "-" else open(a.brief).read()
+    brief = getattr(a, "brief_text", None) or (sys.stdin.read() if a.brief == "-" else open(a.brief).read())
     if not brief.strip():
         sys.exit("brief vacío")
     rid = datetime.now().strftime("d-%Y%m%d-%H%M%S-") + secrets.token_hex(2)
     meta = {"id": rid, "agent": a.agent, "mode": a.mode, "created_at": now(), "timeout": a.timeout,
             "model": a.model, "effort": a.effort, "title": a.title or brief.strip().splitlines()[0][:100],
-            "ticket": a.ticket, "worktree": None}
+            "ticket": a.ticket, "worktree": None, "validate": getattr(a, "validate", None)}
+    if a.mode == "write" and not meta["validate"] and "validaci" not in brief.lower():
+        print("aviso: escritura sin comando de validación — las corridas sin validación son las que terminaron "
+              "en retrabajo; pasar --validate \"<cmd>\" si existe uno", file=sys.stderr)
+    if meta["validate"] and meta["validate"] not in brief:
+        brief = brief.rstrip() + f"\n\nValidación (obligatoria, el delegante la vuelve a correr): {meta['validate']}\n"
     if a.repo:
         repo = os.path.abspath(a.repo)
         path = os.path.join(WORKTREES, f"delegate-{rid}")
@@ -301,6 +335,24 @@ def cmd_run(a):
     prompt = CONTRACT.format(mode_rule=MODE_RULES[a.mode]) + brief
     result, error = exec_agent(meta, prompt)
     finish(meta, result, error, before)
+
+
+ASK_BRIEF = """Objetivo: responder esta pregunta sobre el código del directorio actual, sin modificar nada.
+Pregunta: {q}
+Formato: summary = la respuesta directa (máx. 3 oraciones); findings = las ubicaciones que la sustentan
+('ruta:línea — qué hay ahí'), las justas para que otro agente verifique sin explorar el repo.
+Validación: ninguna (modo lectura).
+"""
+
+
+def cmd_ask(a):
+    q = sys.stdin.read() if a.question == "-" else a.question
+    if not q.strip():
+        sys.exit("pregunta vacía")
+    ns = argparse.Namespace(repo=None, dir=a.dir, base="HEAD", agent=a.agent, mode="read", timeout=a.timeout,
+                            model=a.model, effort=a.effort, title=a.title or ("ask: " + q.strip()[:90]),
+                            ticket=a.ticket, allow_shared=True, validate=None, brief_text=ASK_BRIEF.format(q=q.strip()))
+    cmd_run(ns)
 
 
 def cmd_followup(a):
@@ -388,7 +440,18 @@ def main():
     r.add_argument("--title")
     r.add_argument("--ticket")
     r.add_argument("--allow-shared", action="store_true", help="permitir --dir sobre un checkout de projects/")
+    r.add_argument("--validate", help="comando de validación: va al brief y el script lo corre él mismo al terminar")
     r.set_defaults(fn=cmd_run)
+    k = sub.add_parser("ask", help="pregunta read-only sobre un repo, sin worktree (Codex, effort low)")
+    k.add_argument("question", help="la pregunta, o - para stdin")
+    k.add_argument("--dir", default=".", help="directorio a investigar (default: el actual)")
+    k.add_argument("--agent", choices=["codex", "claude"], default="codex")
+    k.add_argument("--effort", default="low")
+    k.add_argument("--model")
+    k.add_argument("--timeout", type=int, default=600)
+    k.add_argument("--title")
+    k.add_argument("--ticket")
+    k.set_defaults(fn=cmd_ask)
     f = sub.add_parser("followup")
     f.add_argument("id")
     f.add_argument("--brief", required=True)

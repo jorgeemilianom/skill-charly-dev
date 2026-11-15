@@ -54,7 +54,7 @@ tiene un único camino de escritura y uno de lectura:
 | `session_context.py` | Hook `SessionStart`: digest de perfil + reglas universales ≥ 0.8, digest del repo del `cwd`, avisos (archivo corrupto, consolidación vencida), backup diario. |
 | `cognition_model.py` / `cognition.py` | Estado propio del agente (`memory/cognition.json`): esquema y operaciones (`memory_store.py cognitive <op>`, JSON por stdin) / lectura (`status`, `context`, `recall`, `metrics`, `tick`). Ver "Protocolo cognitivo" abajo y `docs/cognition.md`. |
 | `self_model.py` | Puntos ciegos recurrentes: `--refresh` los guarda en `cognition.json`; `self_model.py <memdir>` sigue siendo la consulta histórica. |
-| `delegate.py` | Delegación entre agentes (`/m-delegate`): corre Codex o Claude sin interacción en un worktree propio, con contrato y schema de respuesta; `run`/`followup`/`show`/`review`/`stats`/`cleanup`. Logs en `memory/delegations/`. |
+| `delegate.py` | Delegación entre agentes (`/m-delegate`): corre Codex o Claude sin interacción en un worktree propio, con contrato y schema de respuesta; `run` (con `--validate` corre la validación él mismo)/`ask` (pregunta read-only sin worktree)/`followup`/`show`/`review`/`stats`/`cleanup`. Logs en `memory/delegations/`. |
 | `memory_consolidate.py` / `memory_migrate.py` | Preparar la consolidación periódica (`/m-memory consolidate`) / upgrade idempotente del schema. |
 
 **Nunca** escribir `memory/*.json` con `jq … > archivo`, `echo > archivo` ni `open(…, 'w')`.

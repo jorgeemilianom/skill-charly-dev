@@ -39,6 +39,13 @@ Fuente única para Claude y Codex — `agent-context.md` las referencia, no las 
   decisión, el riesgo o el próximo paso. Sin preámbulos, sin repetir contexto ni output de
   herramientas, sin alternativas no pedidas ni resúmenes de cierre. Las plantillas de salida de las
   skills son un máximo: omitir los campos vacíos.
+- **Investigación read-only → Codex, no tokens propios**: antes de explorar un repo leyendo muchos
+  archivos o de lanzar un subagente `Explore`/`general-purpose` para ubicar código ("¿dónde se calcula
+  X?", "¿quién llama a Y?", "¿cómo funciona Z?"), usar
+  `python3 scripts/delegate.py ask "<pregunta>" --dir projects/<repo>` (~20 s, cuota de OpenAI) y leer
+  solo las líneas `ruta:línea` que devuelve. Leer directo solo cuando ya se sabe qué archivo y qué
+  líneas mirar (si el runtime es Codex, investigar directo). Trabajo mecánico con validación →
+  `/m-delegate` (decidirlo sin preguntar).
 - Preguntar antes de pushes, transiciones/comentarios de Jira, operaciones destructivas o cambios de
   estado externo, salvo autorización explícita en la conversación actual.
 
